@@ -1,9 +1,10 @@
 package com.example.espressoshotcapture.capture.engine
 
 import com.example.espressoshotcapture.capture.domain.CaptureTarget
+import com.example.espressoshotcapture.capture.domain.WeightSample
 
 class ShotCaptureEngine(
-    @Suppress("unused") private val config: ShotCaptureConfig = ShotCaptureConfig()
+    private val config: ShotCaptureConfig = ShotCaptureConfig()
 ) {
     var state: ShotCaptureState = ShotCaptureState.DISCONNECTED
         private set
@@ -11,7 +12,11 @@ class ShotCaptureEngine(
     var activeTarget: CaptureTarget? = null
         private set
 
+    var recordingStartedAtMs: Long? = null
+        private set
+
     private var isScaleConnected: Boolean = false
+    private val recentSamples = mutableListOf<WeightSample>()
 
     fun onScaleConnected() {
         isScaleConnected = true
@@ -24,6 +29,8 @@ class ShotCaptureEngine(
         isScaleConnected = false
         state = ShotCaptureState.DISCONNECTED
         activeTarget = null
+        recentSamples.clear()
+        recordingStartedAtMs = null
     }
 
     fun onTareConfirmed() {
@@ -48,12 +55,40 @@ class ShotCaptureEngine(
         return true
     }
 
+    fun onWeightSample(sample: WeightSample) {
+        if (state != ShotCaptureState.ARMED) {
+            return
+        }
+
+        recentSamples += sample
+        trimRecentSamples()
+
+        if (StartPolicy.shouldStart(state = state, recentSamples = recentSamples, config = config)) {
+            recordingStartedAtMs = sample.timestampMs
+            state = ShotCaptureState.RECORDING
+        }
+    }
+
     fun reset() {
         activeTarget = null
+        recentSamples.clear()
+        recordingStartedAtMs = null
         state = if (isScaleConnected) {
             ShotCaptureState.CONNECTED_IDLE
         } else {
             ShotCaptureState.DISCONNECTED
+        }
+    }
+
+    private fun trimRecentSamples() {
+        val maxSampleCount = config.startConfirmationSamples
+        if (maxSampleCount <= 0) {
+            recentSamples.clear()
+            return
+        }
+
+        while (recentSamples.size > maxSampleCount) {
+            recentSamples.removeAt(0)
         }
     }
 
