@@ -51,7 +51,7 @@ class ShotDraftJsonExporterTest {
         assertEquals("QUICK_SHOT", target["source"]?.jsonPrimitive?.content)
         assertEquals(18.0, target["doseG"]?.jsonPrimitive?.double ?: error("Expected dose"), 0.0)
         assertEquals(2.0, target["targetRatio"]?.jsonPrimitive?.double ?: error("Expected ratio"), 0.0)
-        assertEquals(36.5, target["targetYieldG"]?.jsonPrimitive?.double ?: error("Expected yield"), 0.0)
+        assertEquals(36.0, target["targetYieldG"]?.jsonPrimitive?.double ?: error("Expected yield"), 0.0)
     }
 
     @Test
@@ -60,10 +60,10 @@ class ShotDraftJsonExporterTest {
 
         assertEquals("AUTO_WEIGHT", timing["startMode"]?.jsonPrimitive?.content)
         assertEquals("TARGET_YIELD", timing["stopMode"]?.jsonPrimitive?.content)
-        assertEquals(28_000L, timing["brewTimeMs"]?.jsonPrimitive?.long)
+        assertEquals(JsonNull, timing["brewTimeMs"])
         assertEquals(25_000L, timing["flowTimeMs"]?.jsonPrimitive?.long)
         assertEquals(24_000L, timing["targetReachedAtMs"]?.jsonPrimitive?.long)
-        assertEquals(3_000L, timing["firstWeightDelayMs"]?.jsonPrimitive?.long)
+        assertEquals(JsonNull, timing["firstWeightDelayMs"])
         assertEquals(1_500L, timing["postTargetRecordingMs"]?.jsonPrimitive?.long)
     }
 
@@ -72,7 +72,7 @@ class ShotDraftJsonExporterTest {
         val result = exportShot()["result"]!!.jsonObject
 
         assertEquals(37.25, result["actualYieldG"]?.jsonPrimitive?.double ?: error("Expected actual yield"), 0.0)
-        assertEquals(0.75, result["postTargetDriftG"]?.jsonPrimitive?.double ?: error("Expected drift"), 0.0)
+        assertEquals(1.25, result["postTargetDriftG"]?.jsonPrimitive?.double ?: error("Expected drift"), 0.0)
         assertEquals(1.49, result["averageFlowGPerS"]?.jsonPrimitive?.double ?: error("Expected average flow"), 0.0)
         assertEquals(2.12, result["maxFlowGPerS"]?.jsonPrimitive?.double ?: error("Expected max flow"), 0.0)
         assertEquals(2, result["sampleCount"]?.jsonPrimitive?.int)
@@ -140,21 +140,21 @@ class ShotDraftJsonExporterTest {
                 beanId = "bean-1",
                 doseG = 18.0,
                 targetRatio = 2.0,
-                targetYieldG = 36.5,
+                targetYieldG = 36.0,
                 targetTimeS = 28.5
             ),
             timing = ShotTiming(
                 startMode = StartMode.AUTO_WEIGHT,
                 stopMode = StopMode.TARGET_YIELD,
-                brewTimeMs = 28_000L,
+                brewTimeMs = null,
                 flowTimeMs = 25_000L,
                 targetReachedAtMs = 24_000L,
-                firstWeightDelayMs = 3_000L,
+                firstWeightDelayMs = null,
                 postTargetRecordingMs = 1_500L
             ),
             result = ShotResult(
                 actualYieldG = 37.25,
-                postTargetDriftG = 0.75,
+                postTargetDriftG = 1.25,
                 averageFlowGPerS = 1.49,
                 maxFlowGPerS = 2.12,
                 sampleCount = 2
