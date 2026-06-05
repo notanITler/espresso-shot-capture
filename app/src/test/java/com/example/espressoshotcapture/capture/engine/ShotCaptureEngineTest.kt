@@ -1,6 +1,7 @@
 package com.example.espressoshotcapture.capture.engine
 
 import com.example.espressoshotcapture.capture.domain.CaptureTarget
+import com.example.espressoshotcapture.capture.domain.ShotStatus
 import com.example.espressoshotcapture.capture.domain.ShotSource
 import com.example.espressoshotcapture.capture.domain.WeightSample
 import org.junit.Assert.assertEquals
@@ -314,6 +315,85 @@ class ShotCaptureEngineTest {
         assertNull(engine.targetReachedWeightG)
     }
 
+    @Test
+    fun createsCompletedShotDraftWhenSaved() {
+        val engine = savedEngine()
+
+        assertEquals(ShotCaptureState.SAVED, engine.state)
+        assertEquals("shot-2000", engine.completedShotDraft?.id)
+        assertEquals(2000L, engine.completedShotDraft?.createdAtEpochMs)
+    }
+
+    @Test
+    fun completedShotDraftUsesActiveTarget() {
+        val target = validTarget(targetYieldG = 1.0)
+        val engine = savedEngine(target = target)
+
+        assertSame(target, engine.completedShotDraft?.target)
+    }
+
+    @Test
+    fun completedShotDraftContainsRecordedSamples() {
+        val engine = savedEngine()
+
+        assertEquals(engine.recordedSamples, engine.completedShotDraft?.samples)
+    }
+
+    @Test
+    fun completedShotDraftHasCompletedStatus() {
+        val engine = savedEngine()
+
+        assertEquals(ShotStatus.COMPLETED, engine.completedShotDraft?.status)
+        assertNull(engine.completedShotDraft?.notes)
+    }
+
+    @Test
+    fun completedShotDraftCalculatesActualYield() {
+        val engine = savedEngine()
+        val draft = engine.completedShotDraft ?: error("Expected completed shot draft")
+
+        assertEquals(1.4, draft.result.actualYieldG ?: error("Expected actual yield"), 0.0)
+        assertEquals(2, draft.result.sampleCount)
+        assertNull(draft.result.averageFlowGPerS)
+        assertNull(draft.result.maxFlowGPerS)
+    }
+
+    @Test
+    fun completedShotDraftCalculatesPostTargetDrift() {
+        val engine = savedEngine()
+        val draft = engine.completedShotDraft ?: error("Expected completed shot draft")
+
+        assertEquals(0.4, draft.result.postTargetDriftG ?: error("Expected post-target drift"), 0.000001)
+    }
+
+    @Test
+    fun completedShotDraftUsesRelativeTargetReachedAtMs() {
+        val engine = savedEngine()
+        val draft = engine.completedShotDraft ?: error("Expected completed shot draft")
+
+        assertEquals(500L, draft.timing.targetReachedAtMs)
+        assertEquals(2000L, draft.timing.flowTimeMs)
+        assertEquals(1500L, draft.timing.postTargetRecordingMs)
+    }
+
+    @Test
+    fun resetClearsCompletedShotDraft() {
+        val engine = savedEngine()
+
+        engine.reset()
+
+        assertNull(engine.completedShotDraft)
+    }
+
+    @Test
+    fun disconnectClearsCompletedShotDraft() {
+        val engine = savedEngine()
+
+        engine.onScaleDisconnected()
+
+        assertNull(engine.completedShotDraft)
+    }
+
     private fun connectedIdleEngine(config: ShotCaptureConfig = ShotCaptureConfig()): ShotCaptureEngine =
         ShotCaptureEngine(config = config).also { engine ->
             engine.onScaleConnected()
@@ -338,6 +418,15 @@ class ShotCaptureEngineTest {
     ): ShotCaptureEngine =
         armedEngine(config = config, target = target).also { engine ->
             engine.addSamples(0.1, 0.3, 0.5)
+        }
+
+    private fun savedEngine(
+        config: ShotCaptureConfig = ShotCaptureConfig(),
+        target: CaptureTarget = validTarget(targetYieldG = 1.0)
+    ): ShotCaptureEngine =
+        recordingEngine(config = config, target = target).also { engine ->
+            engine.onWeightSample(sample(timestampMs = 2500, weightG = 1.1))
+            engine.onWeightSample(sample(timestampMs = 4000, weightG = 1.4))
         }
 
     private fun errorEngine(): ShotCaptureEngine =

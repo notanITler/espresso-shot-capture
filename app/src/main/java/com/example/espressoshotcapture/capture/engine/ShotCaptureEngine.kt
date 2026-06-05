@@ -2,6 +2,12 @@ package com.example.espressoshotcapture.capture.engine
 
 import com.example.espressoshotcapture.capture.domain.CapturedSample
 import com.example.espressoshotcapture.capture.domain.CaptureTarget
+import com.example.espressoshotcapture.capture.domain.ShotDraft
+import com.example.espressoshotcapture.capture.domain.ShotResult
+import com.example.espressoshotcapture.capture.domain.ShotStatus
+import com.example.espressoshotcapture.capture.domain.ShotTiming
+import com.example.espressoshotcapture.capture.domain.StartMode
+import com.example.espressoshotcapture.capture.domain.StopMode
 import com.example.espressoshotcapture.capture.domain.WeightSample
 
 class ShotCaptureEngine(
@@ -25,6 +31,9 @@ class ShotCaptureEngine(
     val recordedSamples: List<CapturedSample>
         get() = capturedSamples.toList()
 
+    var completedShotDraft: ShotDraft? = null
+        private set
+
     private var isScaleConnected: Boolean = false
     private val armedSamples = mutableListOf<WeightSample>()
     private val capturedSamples = mutableListOf<CapturedSample>()
@@ -47,6 +56,7 @@ class ShotCaptureEngine(
         recordingStartedAtMs = null
         targetReachedAtMs = null
         targetReachedWeightG = null
+        completedShotDraft = null
     }
 
     fun onTareConfirmed() {
@@ -87,6 +97,7 @@ class ShotCaptureEngine(
         recordingStartedAtMs = null
         targetReachedAtMs = null
         targetReachedWeightG = null
+        completedShotDraft = null
         state = if (isScaleConnected) {
             ShotCaptureState.CONNECTED_IDLE
         } else {
@@ -141,9 +152,41 @@ class ShotCaptureEngine(
                 }
             }
             StopDecision.COMPLETE -> {
+                completedShotDraft = createCompletedShotDraft(target)
                 state = ShotCaptureState.SAVED
             }
         }
+    }
+
+    private fun createCompletedShotDraft(target: CaptureTarget): ShotDraft {
+        val recordingStartTimestampMs = recordingStartedAtMs ?: 0L
+        val samples = recordedSamples
+        val actualYieldG = samples.lastOrNull()?.weightGRaw
+
+        return ShotDraft(
+            id = "shot-$recordingStartTimestampMs",
+            createdAtEpochMs = recordingStartTimestampMs,
+            target = target,
+            timing = ShotTiming(
+                startMode = StartMode.AUTO_WEIGHT,
+                stopMode = StopMode.TARGET_YIELD,
+                brewTimeMs = null,
+                flowTimeMs = samples.lastOrNull()?.tMs ?: 0L,
+                targetReachedAtMs = targetReachedAtMs?.minus(recordingStartTimestampMs),
+                firstWeightDelayMs = null,
+                postTargetRecordingMs = config.postTargetRecordingMs
+            ),
+            result = ShotResult(
+                actualYieldG = actualYieldG,
+                postTargetDriftG = actualYieldG?.minus(target.targetYieldG),
+                averageFlowGPerS = null,
+                maxFlowGPerS = null,
+                sampleCount = samples.size
+            ),
+            samples = samples,
+            status = ShotStatus.COMPLETED,
+            notes = null
+        )
     }
 
     private fun trimRecentSamples() {
