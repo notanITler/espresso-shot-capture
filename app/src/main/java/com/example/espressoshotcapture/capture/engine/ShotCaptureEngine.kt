@@ -16,6 +16,12 @@ class ShotCaptureEngine(
     var recordingStartedAtMs: Long? = null
         private set
 
+    var targetReachedAtMs: Long? = null
+        private set
+
+    var targetReachedWeightG: Double? = null
+        private set
+
     val recordedSamples: List<CapturedSample>
         get() = capturedSamples.toList()
 
@@ -39,6 +45,8 @@ class ShotCaptureEngine(
         capturedSamples.clear()
         previousRecordedSample = null
         recordingStartedAtMs = null
+        targetReachedAtMs = null
+        targetReachedWeightG = null
     }
 
     fun onTareConfirmed() {
@@ -66,7 +74,7 @@ class ShotCaptureEngine(
     fun onWeightSample(sample: WeightSample) {
         when (state) {
             ShotCaptureState.ARMED -> handleArmedSample(sample)
-            ShotCaptureState.RECORDING -> recordSample(sample)
+            ShotCaptureState.RECORDING -> handleRecordingSample(sample)
             else -> return
         }
     }
@@ -77,6 +85,8 @@ class ShotCaptureEngine(
         capturedSamples.clear()
         previousRecordedSample = null
         recordingStartedAtMs = null
+        targetReachedAtMs = null
+        targetReachedWeightG = null
         state = if (isScaleConnected) {
             ShotCaptureState.CONNECTED_IDLE
         } else {
@@ -94,6 +104,11 @@ class ShotCaptureEngine(
         }
     }
 
+    private fun handleRecordingSample(sample: WeightSample) {
+        recordSample(sample)
+        evaluateStopPolicy(sample)
+    }
+
     private fun recordSample(sample: WeightSample) {
         val recordingStartTimestampMs = recordingStartedAtMs ?: sample.timestampMs
         capturedSamples += SamplingPolicy.toCapturedSample(
@@ -104,6 +119,31 @@ class ShotCaptureEngine(
             config = config
         )
         previousRecordedSample = sample
+    }
+
+    private fun evaluateStopPolicy(sample: WeightSample) {
+        val target = activeTarget ?: return
+
+        when (
+            StopPolicy.evaluate(
+                currentWeightG = sample.weightG,
+                targetYieldG = target.targetYieldG,
+                targetReachedAtMs = targetReachedAtMs,
+                currentTimestampMs = sample.timestampMs,
+                config = config
+            )
+        ) {
+            StopDecision.CONTINUE -> Unit
+            StopDecision.TARGET_REACHED -> {
+                if (targetReachedAtMs == null) {
+                    targetReachedAtMs = sample.timestampMs
+                    targetReachedWeightG = sample.weightG
+                }
+            }
+            StopDecision.COMPLETE -> {
+                state = ShotCaptureState.SAVED
+            }
+        }
     }
 
     private fun trimRecentSamples() {

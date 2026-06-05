@@ -246,6 +246,74 @@ class ShotCaptureEngineTest {
         assertTrue(engine.recordedSamples.isEmpty())
     }
 
+    @Test
+    fun recordsTargetReachedTimestamp() {
+        val engine = recordingEngine(target = validTarget(targetYieldG = 1.0))
+
+        engine.onWeightSample(sample(timestampMs = 2500, weightG = 1.1))
+
+        assertEquals(2500L, engine.targetReachedAtMs)
+    }
+
+    @Test
+    fun recordsTargetReachedWeight() {
+        val engine = recordingEngine(target = validTarget(targetYieldG = 1.0))
+
+        engine.onWeightSample(sample(timestampMs = 2500, weightG = 1.1))
+
+        assertEquals(1.1, engine.targetReachedWeightG ?: error("Expected target reached weight"), 0.0)
+    }
+
+    @Test
+    fun targetReachedOnlyRecordedOnce() {
+        val engine = recordingEngine(target = validTarget(targetYieldG = 1.0))
+
+        engine.onWeightSample(sample(timestampMs = 2500, weightG = 1.1))
+        engine.onWeightSample(sample(timestampMs = 2600, weightG = 1.2))
+
+        assertEquals(2500L, engine.targetReachedAtMs)
+        assertEquals(1.1, engine.targetReachedWeightG ?: error("Expected target reached weight"), 0.0)
+    }
+
+    @Test
+    fun continuesCapturingSamplesAfterTargetReached() {
+        val engine = recordingEngine(target = validTarget(targetYieldG = 1.0))
+
+        engine.onWeightSample(sample(timestampMs = 2500, weightG = 1.1))
+        engine.onWeightSample(sample(timestampMs = 3000, weightG = 1.3))
+
+        assertEquals(ShotCaptureState.RECORDING, engine.state)
+        assertEquals(
+            listOf(1.1, 1.3),
+            engine.recordedSamples.map { it.weightGRaw }
+        )
+    }
+
+    @Test
+    fun savedStateReachedAfterPostTargetWindow() {
+        val engine = recordingEngine(target = validTarget(targetYieldG = 1.0))
+
+        engine.onWeightSample(sample(timestampMs = 2500, weightG = 1.1))
+        engine.onWeightSample(sample(timestampMs = 4000, weightG = 1.4))
+
+        assertEquals(ShotCaptureState.SAVED, engine.state)
+        assertEquals(
+            listOf(1.1, 1.4),
+            engine.recordedSamples.map { it.weightGRaw }
+        )
+    }
+
+    @Test
+    fun resetClearsTargetReachedInformation() {
+        val engine = recordingEngine(target = validTarget(targetYieldG = 1.0))
+        engine.onWeightSample(sample(timestampMs = 2500, weightG = 1.1))
+
+        engine.reset()
+
+        assertNull(engine.targetReachedAtMs)
+        assertNull(engine.targetReachedWeightG)
+    }
+
     private fun connectedIdleEngine(config: ShotCaptureConfig = ShotCaptureConfig()): ShotCaptureEngine =
         ShotCaptureEngine(config = config).also { engine ->
             engine.onScaleConnected()
@@ -256,13 +324,19 @@ class ShotCaptureEngineTest {
             engine.onTareConfirmed()
         }
 
-    private fun armedEngine(config: ShotCaptureConfig = ShotCaptureConfig()): ShotCaptureEngine =
+    private fun armedEngine(
+        config: ShotCaptureConfig = ShotCaptureConfig(),
+        target: CaptureTarget = validTarget()
+    ): ShotCaptureEngine =
         taredEngine(config = config).also { engine ->
-            engine.arm(validTarget())
+            engine.arm(target)
         }
 
-    private fun recordingEngine(config: ShotCaptureConfig = ShotCaptureConfig()): ShotCaptureEngine =
-        armedEngine(config = config).also { engine ->
+    private fun recordingEngine(
+        config: ShotCaptureConfig = ShotCaptureConfig(),
+        target: CaptureTarget = validTarget()
+    ): ShotCaptureEngine =
+        armedEngine(config = config, target = target).also { engine ->
             engine.addSamples(0.1, 0.3, 0.5)
         }
 
