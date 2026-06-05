@@ -1,5 +1,6 @@
 package com.example.espressoshotcapture.capture.engine
 
+import com.example.espressoshotcapture.capture.domain.CapturedSample
 import com.example.espressoshotcapture.capture.domain.CaptureTarget
 import com.example.espressoshotcapture.capture.domain.WeightSample
 
@@ -15,8 +16,13 @@ class ShotCaptureEngine(
     var recordingStartedAtMs: Long? = null
         private set
 
+    val recordedSamples: List<CapturedSample>
+        get() = capturedSamples.toList()
+
     private var isScaleConnected: Boolean = false
-    private val recentSamples = mutableListOf<WeightSample>()
+    private val armedSamples = mutableListOf<WeightSample>()
+    private val capturedSamples = mutableListOf<CapturedSample>()
+    private var previousRecordedSample: WeightSample? = null
 
     fun onScaleConnected() {
         isScaleConnected = true
@@ -29,7 +35,9 @@ class ShotCaptureEngine(
         isScaleConnected = false
         state = ShotCaptureState.DISCONNECTED
         activeTarget = null
-        recentSamples.clear()
+        armedSamples.clear()
+        capturedSamples.clear()
+        previousRecordedSample = null
         recordingStartedAtMs = null
     }
 
@@ -56,22 +64,18 @@ class ShotCaptureEngine(
     }
 
     fun onWeightSample(sample: WeightSample) {
-        if (state != ShotCaptureState.ARMED) {
-            return
-        }
-
-        recentSamples += sample
-        trimRecentSamples()
-
-        if (StartPolicy.shouldStart(state = state, recentSamples = recentSamples, config = config)) {
-            recordingStartedAtMs = sample.timestampMs
-            state = ShotCaptureState.RECORDING
+        when (state) {
+            ShotCaptureState.ARMED -> handleArmedSample(sample)
+            ShotCaptureState.RECORDING -> recordSample(sample)
+            else -> return
         }
     }
 
     fun reset() {
         activeTarget = null
-        recentSamples.clear()
+        armedSamples.clear()
+        capturedSamples.clear()
+        previousRecordedSample = null
         recordingStartedAtMs = null
         state = if (isScaleConnected) {
             ShotCaptureState.CONNECTED_IDLE
@@ -80,15 +84,37 @@ class ShotCaptureEngine(
         }
     }
 
+    private fun handleArmedSample(sample: WeightSample) {
+        armedSamples += sample
+        trimRecentSamples()
+
+        if (StartPolicy.shouldStart(state = state, recentSamples = armedSamples, config = config)) {
+            recordingStartedAtMs = sample.timestampMs
+            state = ShotCaptureState.RECORDING
+        }
+    }
+
+    private fun recordSample(sample: WeightSample) {
+        val recordingStartTimestampMs = recordingStartedAtMs ?: sample.timestampMs
+        capturedSamples += SamplingPolicy.toCapturedSample(
+            index = capturedSamples.size,
+            recordingStartTimestampMs = recordingStartTimestampMs,
+            currentSample = sample,
+            previousSample = previousRecordedSample,
+            config = config
+        )
+        previousRecordedSample = sample
+    }
+
     private fun trimRecentSamples() {
         val maxSampleCount = config.startConfirmationSamples
         if (maxSampleCount <= 0) {
-            recentSamples.clear()
+            armedSamples.clear()
             return
         }
 
-        while (recentSamples.size > maxSampleCount) {
-            recentSamples.removeAt(0)
+        while (armedSamples.size > maxSampleCount) {
+            armedSamples.removeAt(0)
         }
     }
 

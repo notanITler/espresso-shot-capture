@@ -178,19 +178,92 @@ class ShotCaptureEngineTest {
         assertNull(engine.recordingStartedAtMs)
     }
 
-    private fun connectedIdleEngine(): ShotCaptureEngine =
-        ShotCaptureEngine().also { engine ->
+    @Test
+    fun recordingStoresCapturedSamples() {
+        val engine = recordingEngine()
+
+        engine.onWeightSample(sample(timestampMs = 2500, weightG = 0.8))
+        engine.onWeightSample(sample(timestampMs = 3000, weightG = 1.2))
+
+        assertEquals(2, engine.recordedSamples.size)
+    }
+
+    @Test
+    fun sampleOrderIsPreserved() {
+        val engine = recordingEngine()
+
+        engine.onWeightSample(sample(timestampMs = 2500, weightG = 0.8))
+        engine.onWeightSample(sample(timestampMs = 3000, weightG = 1.2))
+        engine.onWeightSample(sample(timestampMs = 3500, weightG = 1.6))
+
+        assertEquals(
+            listOf(0.8, 1.2, 1.6),
+            engine.recordedSamples.map { it.weightGRaw }
+        )
+    }
+
+    @Test
+    fun resetClearsRecordedSamples() {
+        val engine = recordingEngine()
+        engine.onWeightSample(sample(timestampMs = 2500, weightG = 0.8))
+
+        engine.reset()
+
+        assertTrue(engine.recordedSamples.isEmpty())
+    }
+
+    @Test
+    fun samplesUseRelativeRecordingTime() {
+        val engine = recordingEngine()
+
+        engine.onWeightSample(sample(timestampMs = 2750, weightG = 0.8))
+
+        assertEquals(750L, engine.recordedSamples.single().tMs)
+    }
+
+    @Test
+    fun outlierDetectionUsesSamplingPolicy() {
+        val engine = recordingEngine(
+            config = ShotCaptureConfig(outlierJumpThresholdG = 1.0)
+        )
+
+        engine.onWeightSample(sample(timestampMs = 2500, weightG = 1.0))
+        engine.onWeightSample(sample(timestampMs = 2600, weightG = 2.1))
+
+        assertEquals(
+            listOf(false, true),
+            engine.recordedSamples.map { it.isOutlier }
+        )
+    }
+
+    @Test
+    fun armedSamplesAreNotAddedToRecordedSamples() {
+        val engine = armedEngine()
+
+        engine.addSamples(0.1, 0.3, 0.5)
+
+        assertEquals(ShotCaptureState.RECORDING, engine.state)
+        assertTrue(engine.recordedSamples.isEmpty())
+    }
+
+    private fun connectedIdleEngine(config: ShotCaptureConfig = ShotCaptureConfig()): ShotCaptureEngine =
+        ShotCaptureEngine(config = config).also { engine ->
             engine.onScaleConnected()
         }
 
-    private fun taredEngine(): ShotCaptureEngine =
-        connectedIdleEngine().also { engine ->
+    private fun taredEngine(config: ShotCaptureConfig = ShotCaptureConfig()): ShotCaptureEngine =
+        connectedIdleEngine(config = config).also { engine ->
             engine.onTareConfirmed()
         }
 
-    private fun armedEngine(): ShotCaptureEngine =
-        taredEngine().also { engine ->
+    private fun armedEngine(config: ShotCaptureConfig = ShotCaptureConfig()): ShotCaptureEngine =
+        taredEngine(config = config).also { engine ->
             engine.arm(validTarget())
+        }
+
+    private fun recordingEngine(config: ShotCaptureConfig = ShotCaptureConfig()): ShotCaptureEngine =
+        armedEngine(config = config).also { engine ->
+            engine.addSamples(0.1, 0.3, 0.5)
         }
 
     private fun errorEngine(): ShotCaptureEngine =
