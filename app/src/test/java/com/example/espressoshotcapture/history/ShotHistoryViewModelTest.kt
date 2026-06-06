@@ -70,7 +70,7 @@ class ShotHistoryViewModelTest {
     }
 
     @Test
-    fun addTestShotSavesEntityThroughRepository() = runTest(testDispatcher) {
+    fun addTestShotSavesDraftThroughRepository() = runTest(testDispatcher) {
         viewModel.addTestShot()
         advanceUntilIdle()
 
@@ -78,7 +78,34 @@ class ShotHistoryViewModelTest {
         assertTrue(savedShot.id.startsWith("test-shot-"))
         assertTrue(savedShot.json.contains(""""schemaVersion":1"""))
         assertTrue(savedShot.json.contains(""""id":"${savedShot.id}""""))
+        assertTrue(savedShot.json.contains(""""target":{"""))
+        assertTrue(savedShot.json.contains(""""timing":{"""))
+        assertTrue(savedShot.json.contains(""""result":{"""))
+        assertTrue(savedShot.json.contains(""""doseG":18.0"""))
+        assertTrue(savedShot.json.contains(""""sampleCount":0"""))
         assertTrue(savedShot.createdAtEpochMillis > 0L)
+    }
+
+    @Test
+    fun addTestShotUpdatesHistoryUiState() = runTest(testDispatcher) {
+        viewModel.addTestShot()
+        advanceUntilIdle()
+
+        val savedShot = dao.getAllShotsOnce().single()
+        val uiState = viewModel.uiState
+            .first { state -> state.items.isNotEmpty() }
+
+        assertEquals(
+            ShotHistoryUiState(
+                items = listOf(
+                    ShotHistoryItem(
+                        id = savedShot.id,
+                        createdAtEpochMillis = savedShot.createdAtEpochMillis
+                    )
+                )
+            ),
+            uiState
+        )
     }
 
     private fun shotEntity(

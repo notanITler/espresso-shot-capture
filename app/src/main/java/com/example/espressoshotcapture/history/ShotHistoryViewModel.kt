@@ -3,7 +3,14 @@ package com.example.espressoshotcapture.history
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.example.espressoshotcapture.persistence.ShotEntity
+import com.example.espressoshotcapture.capture.domain.CaptureTarget
+import com.example.espressoshotcapture.capture.domain.ShotDraft
+import com.example.espressoshotcapture.capture.domain.ShotResult
+import com.example.espressoshotcapture.capture.domain.ShotSource
+import com.example.espressoshotcapture.capture.domain.ShotStatus
+import com.example.espressoshotcapture.capture.domain.ShotTiming
+import com.example.espressoshotcapture.capture.domain.StartMode
+import com.example.espressoshotcapture.capture.domain.StopMode
 import com.example.espressoshotcapture.repository.ShotRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -28,27 +35,47 @@ class ShotHistoryViewModel(
 
     fun addTestShot() {
         viewModelScope.launch(saveDispatcher) {
-            val createdAtEpochMillis = System.currentTimeMillis()
-            val id = "test-shot-$createdAtEpochMillis"
-
-            shotRepository.saveShot(
-                ShotEntity(
-                    id = id,
-                    json = testShotJson(
-                        id = id,
-                        createdAtEpochMillis = createdAtEpochMillis
-                    ),
-                    createdAtEpochMillis = createdAtEpochMillis
-                )
-            )
+            shotRepository.saveShotDraft(createTestShotDraft())
         }
     }
 
-    private fun testShotJson(
-        id: String,
-        createdAtEpochMillis: Long
-    ): String =
-        """{"schemaVersion":1,"shot":{"id":"$id","createdAtEpochMs":$createdAtEpochMillis,"samples":[],"status":"COMPLETED","notes":null}}"""
+    private fun createTestShotDraft(): ShotDraft {
+        val createdAtEpochMs = System.currentTimeMillis()
+        val id = "test-shot-$createdAtEpochMs"
+
+        return ShotDraft(
+            id = id,
+            createdAtEpochMs = createdAtEpochMs,
+            target = CaptureTarget(
+                source = ShotSource.QUICK_SHOT,
+                recipeId = null,
+                beanId = null,
+                doseG = 18.0,
+                targetRatio = 2.0,
+                targetYieldG = 36.0,
+                targetTimeS = null
+            ),
+            timing = ShotTiming(
+                startMode = StartMode.AUTO_WEIGHT,
+                stopMode = StopMode.TARGET_YIELD,
+                brewTimeMs = null,
+                flowTimeMs = 0L,
+                targetReachedAtMs = null,
+                firstWeightDelayMs = null,
+                postTargetRecordingMs = 1_500L
+            ),
+            result = ShotResult(
+                actualYieldG = null,
+                postTargetDriftG = null,
+                averageFlowGPerS = null,
+                maxFlowGPerS = null,
+                sampleCount = 0
+            ),
+            samples = emptyList(),
+            status = ShotStatus.COMPLETED,
+            notes = "Debug test shot"
+        )
+    }
 
     companion object {
         fun factory(shotRepository: ShotRepository): ViewModelProvider.Factory =
