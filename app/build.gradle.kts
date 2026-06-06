@@ -47,6 +47,7 @@ dependencies {
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7")
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
 
