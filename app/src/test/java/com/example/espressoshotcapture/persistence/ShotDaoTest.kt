@@ -14,6 +14,8 @@ import com.example.espressoshotcapture.capture.domain.ShotTiming
 import com.example.espressoshotcapture.capture.domain.StartMode
 import com.example.espressoshotcapture.capture.domain.StopMode
 import com.example.espressoshotcapture.export.ShotDraftJsonExporter
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -24,13 +26,13 @@ import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
 class ShotDaoTest {
-    private lateinit var database: AppDatabase
+    private lateinit var database: EspressoShotDatabase
     private lateinit var dao: ShotDao
 
     @Before
     fun setUp() {
         val context = ApplicationProvider.getApplicationContext<Context>()
-        database = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java)
+        database = Room.inMemoryDatabaseBuilder(context, EspressoShotDatabase::class.java)
             .allowMainThreadQueries()
             .build()
         dao = database.shotDao()
@@ -58,7 +60,15 @@ class ShotDaoTest {
         dao.insertShot(second)
         dao.insertShot(first)
 
-        assertEquals(listOf(first, second), dao.getAllShots())
+        assertEquals(listOf(first, second), dao.getAllShotsOnce())
+    }
+
+    @Test
+    fun observeShotsEmitsInsertedShots() = runTest {
+        val shot = shotEntity(id = "shot-1")
+        dao.insertShot(shot)
+
+        assertEquals(listOf(shot), dao.observeShots().first())
     }
 
     @Test
