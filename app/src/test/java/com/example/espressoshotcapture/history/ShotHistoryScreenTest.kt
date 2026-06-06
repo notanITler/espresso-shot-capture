@@ -39,6 +39,22 @@ class ShotHistoryScreenTest {
         composeTestRule.onNodeWithText("2000").assertIsDisplayed()
     }
 
+    @Test
+    fun uiStateCanRenderHistoryItems() {
+        composeTestRule.activity.setContent {
+            ShotHistoryScreen(
+                uiState = ShotHistoryUiState(
+                    items = listOf(
+                        ShotHistoryItem(id = "shot-3000", createdAtEpochMillis = 3_000L)
+                    )
+                )
+            )
+        }
+
+        composeTestRule.onNodeWithText("shot-3000").assertIsDisplayed()
+        composeTestRule.onNodeWithText("3000").assertIsDisplayed()
+    }
+
     private fun setHistoryContent(items: List<ShotHistoryItem>) {
         composeTestRule.activity.setContent {
             ShotHistoryScreen(items = items)
