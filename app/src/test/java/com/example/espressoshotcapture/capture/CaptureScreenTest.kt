@@ -74,9 +74,9 @@ class CaptureScreenTest {
             CaptureScreen(uiState = CaptureUiStateMapper.recording())
         }
 
-        composeTestRule.onNodeWithText("Weight: 36.8 g").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Flow time: 28 s").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Average flow: 1.3 g/s").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Weight: 0.0 g").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Flow time: 0 s").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Average flow: 0.0 g/s").assertIsDisplayed()
     }
 
     @Test

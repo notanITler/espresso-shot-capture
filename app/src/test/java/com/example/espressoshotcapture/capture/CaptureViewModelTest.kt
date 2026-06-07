@@ -1,5 +1,6 @@
 package com.example.espressoshotcapture.capture
 
+import com.example.espressoshotcapture.capture.domain.FakeScaleClient
 import com.example.espressoshotcapture.capture.domain.ScaleClient
 import com.example.espressoshotcapture.capture.domain.ScaleConnectionState
 import com.example.espressoshotcapture.capture.domain.ScaleReading
@@ -111,6 +112,139 @@ class CaptureViewModelTest {
     }
 
     @Test
+    fun recordingValuesUpdateFromScaleReadings() = runTest(testDispatcher) {
+        runCurrent()
+        viewModel.onPrimaryAction()
+        runCurrent()
+
+        scaleClient.emitReading(
+            ScaleReading(timestampMillis = 1_000L, weightGrams = 10.0)
+        )
+        runCurrent()
+
+        assertEquals("Weight: 10.0 g", viewModel.uiState.value.currentWeightLabel)
+        assertEquals("Flow time: 0 s", viewModel.uiState.value.flowTimeLabel)
+        assertEquals("Average flow: 0.0 g/s", viewModel.uiState.value.averageFlowLabel)
+
+        scaleClient.emitReading(
+            ScaleReading(timestampMillis = 3_000L, weightGrams = 20.0)
+        )
+        runCurrent()
+
+        assertEquals("Weight: 20.0 g", viewModel.uiState.value.currentWeightLabel)
+        assertEquals("Flow time: 2 s", viewModel.uiState.value.flowTimeLabel)
+        assertEquals("Average flow: 10.0 g/s", viewModel.uiState.value.averageFlowLabel)
+    }
+
+    @Test
+    fun fakeRecordingValuesIncreaseDuringOneRecordingSession() = runTest(testDispatcher) {
+        val fakeScaleClient = FakeScaleClient(
+            readingSequence = listOf(
+                ScaleReading(timestampMillis = 0L, weightGrams = 0.0),
+                ScaleReading(timestampMillis = 1_000L, weightGrams = 2.0),
+                ScaleReading(timestampMillis = 2_000L, weightGrams = 5.0)
+            )
+        )
+        viewModel = CaptureViewModel(
+            shotRepository = ShotRepository(dao),
+            scaleClient = fakeScaleClient,
+            saveDispatcher = testDispatcher,
+            currentTimeMillis = { 123_456L },
+            savedConfirmationDelayMs = 1_000L
+        )
+        runCurrent()
+
+        viewModel.onPrimaryAction()
+        runCurrent()
+
+        assertEquals("Weight: 0.0 g", viewModel.uiState.value.currentWeightLabel)
+        assertEquals("Flow time: 0 s", viewModel.uiState.value.flowTimeLabel)
+        assertEquals("Average flow: 0.0 g/s", viewModel.uiState.value.averageFlowLabel)
+
+        advanceTimeBy(500L)
+        runCurrent()
+
+        assertEquals("Weight: 2.0 g", viewModel.uiState.value.currentWeightLabel)
+        assertEquals("Flow time: 1 s", viewModel.uiState.value.flowTimeLabel)
+        assertEquals("Average flow: 2.0 g/s", viewModel.uiState.value.averageFlowLabel)
+
+        advanceTimeBy(500L)
+        runCurrent()
+
+        assertEquals("Weight: 5.0 g", viewModel.uiState.value.currentWeightLabel)
+        assertEquals("Flow time: 2 s", viewModel.uiState.value.flowTimeLabel)
+        assertEquals("Average flow: 2.5 g/s", viewModel.uiState.value.averageFlowLabel)
+
+        viewModel.onPrimaryAction()
+        runCurrent()
+
+        assertEquals(CaptureStatus.SAVED, viewModel.uiState.value.status)
+
+        advanceTimeBy(1_000L)
+        runCurrent()
+
+        assertEquals(CaptureStatus.READY, viewModel.uiState.value.status)
+    }
+
+    @Test
+    fun stopAndSaveStopsFakeReadingUpdates() = runTest(testDispatcher) {
+        val fakeScaleClient = FakeScaleClient(
+            readingSequence = listOf(
+                ScaleReading(timestampMillis = 0L, weightGrams = 0.0),
+                ScaleReading(timestampMillis = 1_000L, weightGrams = 2.0),
+                ScaleReading(timestampMillis = 2_000L, weightGrams = 5.0),
+                ScaleReading(timestampMillis = 3_000L, weightGrams = 9.0)
+            )
+        )
+        viewModel = CaptureViewModel(
+            shotRepository = ShotRepository(dao),
+            scaleClient = fakeScaleClient,
+            saveDispatcher = testDispatcher,
+            currentTimeMillis = { 123_456L },
+            savedConfirmationDelayMs = 1_000L
+        )
+        runCurrent()
+
+        viewModel.onPrimaryAction()
+        runCurrent()
+        advanceTimeBy(500L)
+        runCurrent()
+
+        assertEquals("Weight: 2.0 g", viewModel.uiState.value.currentWeightLabel)
+        assertEquals("Flow time: 1 s", viewModel.uiState.value.flowTimeLabel)
+
+        viewModel.onPrimaryAction()
+        runCurrent()
+
+        assertEquals(CaptureStatus.SAVED, viewModel.uiState.value.status)
+        assertEquals(null, viewModel.uiState.value.currentWeightLabel)
+        assertEquals(null, viewModel.uiState.value.flowTimeLabel)
+        assertEquals(null, viewModel.uiState.value.averageFlowLabel)
+
+        advanceTimeBy(2_000L)
+        runCurrent()
+
+        assertEquals(CaptureStatus.READY, viewModel.uiState.value.status)
+        assertEquals(null, viewModel.uiState.value.currentWeightLabel)
+        assertEquals(null, viewModel.uiState.value.flowTimeLabel)
+        assertEquals(null, viewModel.uiState.value.averageFlowLabel)
+    }
+
+    @Test
+    fun scaleReadingsDoNotUpdateReadyState() = runTest(testDispatcher) {
+        runCurrent()
+
+        scaleClient.emitReading(
+            ScaleReading(timestampMillis = 1_000L, weightGrams = 10.0)
+        )
+        runCurrent()
+
+        assertEquals(null, viewModel.uiState.value.currentWeightLabel)
+        assertEquals(null, viewModel.uiState.value.flowTimeLabel)
+        assertEquals(null, viewModel.uiState.value.averageFlowLabel)
+    }
+
+    @Test
     fun stopAndSaveSavesShotDraftThroughRepository() = runTest(testDispatcher) {
         runCurrent()
         viewModel.onPrimaryAction()
@@ -153,7 +287,8 @@ private class TestScaleClient : ScaleClient {
     )
     override val connectionState: Flow<ScaleConnectionState> = connectionStates
 
-    override val readings: Flow<ScaleReading> = MutableSharedFlow<ScaleReading>()
+    private val scaleReadings = MutableSharedFlow<ScaleReading>(extraBufferCapacity = 16)
+    override val readings: Flow<ScaleReading> = scaleReadings
 
     override fun connect() {
         connectionStates.value = ScaleConnectionState.Connecting
@@ -166,6 +301,10 @@ private class TestScaleClient : ScaleClient {
 
     fun emitConnectionState(connectionState: ScaleConnectionState) {
         connectionStates.value = connectionState
+    }
+
+    fun emitReading(reading: ScaleReading) {
+        scaleReadings.tryEmit(reading)
     }
 }
 

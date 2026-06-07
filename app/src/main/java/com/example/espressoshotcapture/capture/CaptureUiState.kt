@@ -35,9 +35,9 @@ object CaptureUiStateMapper {
         shotStatusLabel = "Recording",
         primaryActionLabel = "Stop & save",
         isPrimaryActionEnabled = true,
-        currentWeightLabel = "Weight: 36.8 g",
-        flowTimeLabel = "Flow time: 28 s",
-        averageFlowLabel = "Average flow: 1.3 g/s"
+        currentWeightLabel = "Weight: 0.0 g",
+        flowTimeLabel = "Flow time: 0 s",
+        averageFlowLabel = "Average flow: 0.0 g/s"
     )
 
     fun savedConfirmation(scaleConnectionLabel: String = "Scale: Not connected"): CaptureUiState = CaptureUiState(

@@ -61,4 +61,48 @@ class FakeScaleClientTest {
             client.readings.first()
         )
     }
+
+    @Test
+    fun readingsDoNotResetDuringOneConnectedSession() = runTest {
+        val client = FakeScaleClient(
+            readingSequence = listOf(
+                ScaleReading(timestampMillis = 0L, weightGrams = 0.0),
+                ScaleReading(timestampMillis = 1_000L, weightGrams = 2.0)
+            )
+        )
+        client.connect()
+
+        client.emitNextReading()
+        val first = client.readings.first()
+        client.emitNextReading()
+        val second = client.readings.first()
+        client.emitNextReading()
+        val third = client.readings.first()
+
+        assertTrue(second.timestampMillis > first.timestampMillis)
+        assertTrue(second.weightGrams > first.weightGrams)
+        assertTrue(third.timestampMillis > second.timestampMillis)
+        assertTrue(third.weightGrams > second.weightGrams)
+    }
+
+    @Test
+    fun resetReadingsRestartsDeterministicSequence() = runTest {
+        val client = FakeScaleClient(
+            readingSequence = listOf(
+                ScaleReading(timestampMillis = 0L, weightGrams = 0.0),
+                ScaleReading(timestampMillis = 1_000L, weightGrams = 2.0)
+            )
+        )
+        client.connect()
+        client.emitNextReading()
+        client.emitNextReading()
+
+        client.resetReadings()
+        client.emitNextReading()
+
+        assertEquals(
+            ScaleReading(timestampMillis = 0L, weightGrams = 0.0),
+            client.readings.first()
+        )
+    }
 }

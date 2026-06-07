@@ -10,16 +10,23 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.espressoshotcapture.EspressoShotCaptureApplication
+import com.example.espressoshotcapture.capture.domain.FakeScaleClient
 import com.example.espressoshotcapture.capture.domain.ScaleClient
 import com.example.espressoshotcapture.capture.domain.ScaleConnectionState
+import com.example.espressoshotcapture.capture.domain.ScaleReading
+import com.example.espressoshotcapture.capture.domain.ScaleReadingMapper
+import com.example.espressoshotcapture.capture.domain.WeightSample
 import com.example.espressoshotcapture.repository.ShotRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 class CaptureViewModel(
     private val shotRepository: ShotRepository,
@@ -30,6 +37,9 @@ class CaptureViewModel(
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(CaptureUiStateMapper.initialDisconnectedReady())
     val uiState: StateFlow<CaptureUiState> = _uiState.asStateFlow()
+    private var recordingReadingsJob: Job? = null
+    private var fakeReadingEmissionJob: Job? = null
+    private var recordingStartTimestampMs: Long? = null
 
     init {
         viewModelScope.launch {
@@ -49,12 +59,15 @@ class CaptureViewModel(
     }
 
     private fun startRecording() {
+        recordingStartTimestampMs = null
         _uiState.value = CaptureUiStateMapper.recording(
             scaleConnectionLabel = _uiState.value.scaleConnectionLabel
         )
+        startRecordingReadingUpdates()
     }
 
     private fun stopAndSave() {
+        stopRecordingReadingUpdates()
         viewModelScope.launch(saveDispatcher) {
             val shotDraft = FakeCaptureShotDraftFactory.create(currentTimeMillis())
             shotRepository.saveShotDraft(shotDraft)
@@ -67,6 +80,60 @@ class CaptureViewModel(
             )
         }
     }
+
+    private fun startRecordingReadingUpdates() {
+        stopRecordingReadingUpdates()
+        (scaleClient as? FakeScaleClient)?.resetReadings()
+
+        recordingReadingsJob = viewModelScope.launch {
+            scaleClient.readings.collect { reading ->
+                if (_uiState.value.status == CaptureStatus.RECORDING) {
+                    updateRecordingValues(reading)
+                }
+            }
+        }
+
+        val fakeScaleClient = scaleClient as? FakeScaleClient
+        if (fakeScaleClient != null) {
+            fakeReadingEmissionJob = viewModelScope.launch {
+                while (isActive && _uiState.value.status == CaptureStatus.RECORDING) {
+                    fakeScaleClient.emitNextReading()
+                    delay(500L)
+                }
+            }
+        }
+    }
+
+    private fun stopRecordingReadingUpdates() {
+        recordingReadingsJob?.cancel()
+        recordingReadingsJob = null
+        fakeReadingEmissionJob?.cancel()
+        fakeReadingEmissionJob = null
+    }
+
+    private fun updateRecordingValues(reading: ScaleReading) {
+        val sample = ScaleReadingMapper.toWeightSample(reading)
+        val recordingStartMs = recordingStartTimestampMs ?: sample.timestampMs.also {
+            recordingStartTimestampMs = it
+        }
+        val flowTimeMs = (sample.timestampMs - recordingStartMs).coerceAtLeast(0L)
+
+        _uiState.value = _uiState.value.copy(
+            currentWeightLabel = "Weight: ${sample.weightG.toOneDecimal()} g",
+            flowTimeLabel = "Flow time: ${flowTimeMs / 1_000L} s",
+            averageFlowLabel = "Average flow: ${sample.averageFlowGPerS(flowTimeMs).toOneDecimal()} g/s"
+        )
+    }
+
+    private fun WeightSample.averageFlowGPerS(flowTimeMs: Long): Double =
+        if (flowTimeMs <= 0L) {
+            0.0
+        } else {
+            weightG / (flowTimeMs / 1_000.0)
+        }
+
+    private fun Double.toOneDecimal(): String =
+        ((this * 10.0).roundToInt() / 10.0).toString()
 
     private fun updateScaleConnectionLabel(scaleConnectionLabel: String) {
         _uiState.value = _uiState.value.copy(
@@ -81,6 +148,11 @@ class CaptureViewModel(
             ScaleConnectionState.Connected -> "Scale: Connected"
             is ScaleConnectionState.Error -> "Scale: Error"
         }
+
+    override fun onCleared() {
+        stopRecordingReadingUpdates()
+        super.onCleared()
+    }
 
     companion object {
         fun factory(
