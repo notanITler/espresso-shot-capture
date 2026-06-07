@@ -1,5 +1,6 @@
 package com.example.espressoshotcapture.capture
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -12,6 +13,7 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun CaptureScreen(
     uiState: CaptureUiState = CaptureUiStateMapper.initialDisconnectedReady(),
+    onPrimaryAction: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -22,7 +24,23 @@ fun CaptureScreen(
         BasicText(text = "Espresso Shot Capture")
         BasicText(text = uiState.scaleConnectionLabel)
         BasicText(text = uiState.shotStatusLabel)
-        BasicText(text = uiState.primaryActionLabel)
+        uiState.currentWeightLabel?.let { label ->
+            BasicText(text = label)
+        }
+        uiState.flowTimeLabel?.let { label ->
+            BasicText(text = label)
+        }
+        uiState.averageFlowLabel?.let { label ->
+            BasicText(text = label)
+        }
+        BasicText(
+            text = uiState.primaryActionLabel,
+            modifier = if (uiState.isPrimaryActionEnabled) {
+                Modifier.clickable(onClick = onPrimaryAction)
+            } else {
+                Modifier
+            }
+        )
         BasicText(text = "Shot History")
     }
 }
