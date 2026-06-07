@@ -22,6 +22,8 @@ These types are the shared language between the engine, export layer, UI, and fu
 
 `ScaleClient` is a pure Kotlin interface for future hardware adapters. It exposes connection state and scale readings as flows, but does not contain Android BLE APIs, permissions, or Half Decent protocol parsing.
 
+`FakeScaleClient` is the current local simulation adapter. It implements `ScaleClient` with deterministic connection state and deterministic fake readings so the app can smoke-test recording UI behavior before BLE exists. It is not a production BLE adapter and does not parse real scale packets.
+
 ### Engine Layer
 
 Package: `com.example.espressoshotcapture.capture.engine`
@@ -80,10 +82,15 @@ The current app root shows a minimal capture screen plus shot history. Real scal
 
 1. The user taps `Start capture`.
 2. `CaptureViewModel` moves from Ready to Recording.
-3. The user taps `Stop & save`.
-4. `CaptureViewModel` creates a fake but valid `ShotDraft` through `FakeCaptureShotDraftFactory`.
-5. The draft is saved through `ShotRepository.saveShotDraft(...)`.
-6. History updates through the existing repository and Room observation path.
+3. The ViewModel starts a fake reading loop against `FakeScaleClient`.
+4. Deterministic `ScaleReading` values are mapped toward capture-style sample data and used to update `CaptureUiState`.
+5. The screen displays current weight, flow time, and average flow from `CaptureUiState`.
+6. The user taps `Stop & save`.
+7. `CaptureViewModel` creates a fake but valid `ShotDraft` through `FakeCaptureShotDraftFactory`.
+8. The draft is saved through `ShotRepository.saveShotDraft(...)`.
+9. History updates through the existing repository and Room observation path.
+
+This fake recording path is only a local MVP simulation. Real BLE connection handling, Half Decent packet parsing, and real `ShotCaptureEngine` wiring are still future work.
 
 ### Test Utilities
 
@@ -95,7 +102,7 @@ Package: `com.example.espressoshotcapture.capture.testutil`
 
 ```mermaid
 flowchart TD
-    Z["Future ScaleClient"] --> A["ScaleReading"]
+    Z["Future BLE ScaleClient"] --> A["ScaleReading"]
     A --> B["WeightSample"]
     B --> C["ShotCaptureEngine"]
     C --> D{"State"}
@@ -117,8 +124,11 @@ flowchart TD
     S --> T["ShotHistoryViewModel"]
     T --> U["ShotHistoryUiState"]
 
-    V["Manual MVP fake capture"] --> W["FakeCaptureShotDraftFactory"]
-    W --> O
+    V["Start capture"] --> W["CaptureViewModel Recording"]
+    X["FakeScaleClient deterministic readings"] --> W
+    W --> Y["CaptureUiState weight / flow time / average flow"]
+    W -->|"Stop & save"| AA["FakeCaptureShotDraftFactory"]
+    AA --> O
 ```
 
 ## Boundaries
@@ -127,6 +137,7 @@ Current implementation deliberately excludes:
 
 - BLE scale implementation
 - Half Decent protocol parsing
+- Real `ShotCaptureEngine` wiring into the capture UI
 - File export and share flows
 - Import tooling
 

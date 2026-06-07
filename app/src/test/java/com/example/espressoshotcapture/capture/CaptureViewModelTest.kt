@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
@@ -137,6 +138,34 @@ class CaptureViewModelTest {
     }
 
     @Test
+    fun readingsAreFedIntoShotCaptureEngineDuringRecording() = runTest(testDispatcher) {
+        runCurrent()
+        viewModel.onPrimaryAction()
+        runCurrent()
+
+        listOf(
+            ScaleReading(timestampMillis = 0L, weightGrams = 0.0),
+            ScaleReading(timestampMillis = 1_000L, weightGrams = 1.0),
+            ScaleReading(timestampMillis = 2_000L, weightGrams = 2.0),
+            ScaleReading(timestampMillis = 3_000L, weightGrams = 3.5)
+        ).forEach { reading ->
+            scaleClient.emitReading(reading)
+            runCurrent()
+        }
+
+        viewModel.onPrimaryAction()
+        runCurrent()
+
+        val savedShot = dao.getAllShotsOnce().single()
+        assertEquals("shot-125456", savedShot.id)
+        assertTrue(savedShot.json.contains(""""id":"shot-125456""""))
+        assertTrue(savedShot.json.contains(""""createdAtEpochMs":125456"""))
+        assertTrue(savedShot.json.contains(""""weightGRaw":3.5"""))
+        assertTrue(savedShot.json.contains(""""sampleCount":1"""))
+        assertTrue(savedShot.json.contains(""""status":"MANUAL_STOPPED""""))
+    }
+
+    @Test
     fun fakeRecordingValuesIncreaseDuringOneRecordingSession() = runTest(testDispatcher) {
         val fakeScaleClient = FakeScaleClient(
             readingSequence = listOf(
@@ -252,11 +281,29 @@ class CaptureViewModelTest {
         runCurrent()
 
         val savedShot = dao.getAllShotsOnce().single()
-        assertEquals("fake-shot-123456", savedShot.id)
+        assertEquals("shot-123456", savedShot.id)
         assertEquals(123_456L, savedShot.createdAtEpochMillis)
         assertTrue(savedShot.json.contains(""""schemaVersion":1"""))
-        assertTrue(savedShot.json.contains(""""id":"fake-shot-123456""""))
-        assertTrue(savedShot.json.contains(""""actualYieldG":36.8"""))
+        assertTrue(savedShot.json.contains(""""id":"shot-123456""""))
+        assertTrue(savedShot.json.contains(""""status":"MANUAL_STOPPED""""))
+    }
+
+    @Test
+    fun consecutiveCaptureSessionsSaveDistinctShotDrafts() = runTest(testDispatcher) {
+        runCurrent()
+
+        saveRecordingSession()
+        advanceTimeBy(1_000L)
+        runCurrent()
+
+        saveRecordingSession()
+        runCurrent()
+
+        val savedShots = dao.getAllShotsOnce()
+        assertEquals(2, savedShots.size)
+        assertEquals(listOf("shot-125456", "shot-125457"), savedShots.map { it.id })
+        assertTrue(savedShots[0].json.contains(""""id":"shot-125456""""))
+        assertTrue(savedShots[1].json.contains(""""id":"shot-125457""""))
     }
 
     @Test
@@ -278,6 +325,24 @@ class CaptureViewModelTest {
             CaptureUiStateMapper.ready(scaleConnectionLabel = "Scale: Connected"),
             viewModel.uiState.value
         )
+    }
+
+    private fun TestScope.saveRecordingSession() {
+        viewModel.onPrimaryAction()
+        runCurrent()
+
+        listOf(
+            ScaleReading(timestampMillis = 0L, weightGrams = 0.0),
+            ScaleReading(timestampMillis = 1_000L, weightGrams = 1.0),
+            ScaleReading(timestampMillis = 2_000L, weightGrams = 2.0),
+            ScaleReading(timestampMillis = 3_000L, weightGrams = 3.5)
+        ).forEach { reading ->
+            scaleClient.emitReading(reading)
+            runCurrent()
+        }
+
+        viewModel.onPrimaryAction()
+        runCurrent()
     }
 }
 

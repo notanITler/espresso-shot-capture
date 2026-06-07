@@ -105,6 +105,27 @@ class ShotCaptureEngine(
         }
     }
 
+    fun stopManually(fallbackCreatedAtEpochMs: Long): ShotDraft? {
+        completedShotDraft?.let { draft ->
+            return draft
+        }
+
+        val target = activeTarget ?: return null
+        if (state != ShotCaptureState.ARMED && state != ShotCaptureState.RECORDING) {
+            return null
+        }
+
+        completedShotDraft = createShotDraft(
+            target = target,
+            createdAtEpochMs = recordingStartedAtMs ?: fallbackCreatedAtEpochMs,
+            status = ShotStatus.MANUAL_STOPPED,
+            stopMode = StopMode.MANUAL,
+            notes = "Manual fake capture"
+        )
+        state = ShotCaptureState.SAVED
+        return completedShotDraft
+    }
+
     private fun handleArmedSample(sample: WeightSample) {
         armedSamples += sample
         trimRecentSamples()
@@ -152,27 +173,38 @@ class ShotCaptureEngine(
                 }
             }
             StopDecision.COMPLETE -> {
-                completedShotDraft = createCompletedShotDraft(target)
+                completedShotDraft = createShotDraft(
+                    target = target,
+                    createdAtEpochMs = recordingStartedAtMs ?: 0L,
+                    status = ShotStatus.COMPLETED,
+                    stopMode = StopMode.TARGET_YIELD,
+                    notes = null
+                )
                 state = ShotCaptureState.SAVED
             }
         }
     }
 
-    private fun createCompletedShotDraft(target: CaptureTarget): ShotDraft {
-        val recordingStartTimestampMs = recordingStartedAtMs ?: 0L
+    private fun createShotDraft(
+        target: CaptureTarget,
+        createdAtEpochMs: Long,
+        status: ShotStatus,
+        stopMode: StopMode,
+        notes: String?
+    ): ShotDraft {
         val samples = recordedSamples
         val actualYieldG = samples.lastOrNull()?.weightGRaw
 
         return ShotDraft(
-            id = "shot-$recordingStartTimestampMs",
-            createdAtEpochMs = recordingStartTimestampMs,
+            id = "shot-$createdAtEpochMs",
+            createdAtEpochMs = createdAtEpochMs,
             target = target,
             timing = ShotTiming(
                 startMode = StartMode.AUTO_WEIGHT,
-                stopMode = StopMode.TARGET_YIELD,
+                stopMode = stopMode,
                 brewTimeMs = null,
                 flowTimeMs = samples.lastOrNull()?.tMs ?: 0L,
-                targetReachedAtMs = targetReachedAtMs?.minus(recordingStartTimestampMs),
+                targetReachedAtMs = targetReachedAtMs?.minus(createdAtEpochMs),
                 firstWeightDelayMs = null,
                 postTargetRecordingMs = config.postTargetRecordingMs
             ),
@@ -184,8 +216,8 @@ class ShotCaptureEngine(
                 sampleCount = samples.size
             ),
             samples = samples,
-            status = ShotStatus.COMPLETED,
-            notes = null
+            status = status,
+            notes = notes
         )
     }
 

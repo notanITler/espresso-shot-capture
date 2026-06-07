@@ -3,6 +3,7 @@ package com.example.espressoshotcapture.capture.engine
 import com.example.espressoshotcapture.capture.domain.CaptureTarget
 import com.example.espressoshotcapture.capture.domain.ShotStatus
 import com.example.espressoshotcapture.capture.domain.ShotSource
+import com.example.espressoshotcapture.capture.domain.StopMode
 import com.example.espressoshotcapture.capture.domain.WeightSample
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -392,6 +393,37 @@ class ShotCaptureEngineTest {
         engine.onScaleDisconnected()
 
         assertNull(engine.completedShotDraft)
+    }
+
+    @Test
+    fun manualStopCreatesShotDraftFromEngineState() {
+        val engine = recordingEngine()
+        engine.onWeightSample(sample(timestampMs = 2500, weightG = 0.8))
+
+        val draft = engine.stopManually(fallbackCreatedAtEpochMs = 123456)
+            ?: error("Expected manual shot draft")
+
+        assertEquals(ShotCaptureState.SAVED, engine.state)
+        assertEquals("shot-2000", draft.id)
+        assertEquals(2000L, draft.createdAtEpochMs)
+        assertEquals(ShotStatus.MANUAL_STOPPED, draft.status)
+        assertEquals(StopMode.MANUAL, draft.timing.stopMode)
+        assertEquals(engine.recordedSamples, draft.samples)
+        assertEquals(0.8, draft.result.actualYieldG ?: error("Expected actual yield"), 0.0)
+    }
+
+    @Test
+    fun manualStopUsesFallbackTimestampWhenRecordingHasNotStarted() {
+        val engine = armedEngine()
+
+        val draft = engine.stopManually(fallbackCreatedAtEpochMs = 123456)
+            ?: error("Expected manual shot draft")
+
+        assertEquals(ShotCaptureState.SAVED, engine.state)
+        assertEquals("shot-123456", draft.id)
+        assertEquals(123456L, draft.createdAtEpochMs)
+        assertEquals(ShotStatus.MANUAL_STOPPED, draft.status)
+        assertEquals(0, draft.result.sampleCount)
     }
 
     private fun connectedIdleEngine(config: ShotCaptureConfig = ShotCaptureConfig()): ShotCaptureEngine =

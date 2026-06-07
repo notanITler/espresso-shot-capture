@@ -10,12 +10,15 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.espressoshotcapture.EspressoShotCaptureApplication
+import com.example.espressoshotcapture.capture.domain.CaptureTarget
 import com.example.espressoshotcapture.capture.domain.FakeScaleClient
 import com.example.espressoshotcapture.capture.domain.ScaleClient
 import com.example.espressoshotcapture.capture.domain.ScaleConnectionState
 import com.example.espressoshotcapture.capture.domain.ScaleReading
 import com.example.espressoshotcapture.capture.domain.ScaleReadingMapper
+import com.example.espressoshotcapture.capture.domain.ShotSource
 import com.example.espressoshotcapture.capture.domain.WeightSample
+import com.example.espressoshotcapture.capture.engine.ShotCaptureEngine
 import com.example.espressoshotcapture.repository.ShotRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -40,6 +43,10 @@ class CaptureViewModel(
     private var recordingReadingsJob: Job? = null
     private var fakeReadingEmissionJob: Job? = null
     private var recordingStartTimestampMs: Long? = null
+    private var captureSessionStartedAtEpochMs: Long? = null
+    private var firstScaleReadingTimestampMs: Long? = null
+    private var lastCaptureSessionStartedAtEpochMs: Long? = null
+    private var shotCaptureEngine: ShotCaptureEngine = createArmedShotCaptureEngine()
 
     init {
         viewModelScope.launch {
@@ -60,6 +67,9 @@ class CaptureViewModel(
 
     private fun startRecording() {
         recordingStartTimestampMs = null
+        firstScaleReadingTimestampMs = null
+        captureSessionStartedAtEpochMs = nextCaptureSessionStartedAtMs()
+        shotCaptureEngine = createArmedShotCaptureEngine()
         _uiState.value = CaptureUiStateMapper.recording(
             scaleConnectionLabel = _uiState.value.scaleConnectionLabel
         )
@@ -69,7 +79,10 @@ class CaptureViewModel(
     private fun stopAndSave() {
         stopRecordingReadingUpdates()
         viewModelScope.launch(saveDispatcher) {
-            val shotDraft = FakeCaptureShotDraftFactory.create(currentTimeMillis())
+            val fallbackCreatedAtMs = captureSessionStartedAtEpochMs ?: nextCaptureSessionStartedAtMs()
+            val shotDraft = shotCaptureEngine.completedShotDraft
+                ?: shotCaptureEngine.stopManually(fallbackCreatedAtEpochMs = fallbackCreatedAtMs)
+                ?: error("Unable to create shot draft from capture engine")
             shotRepository.saveShotDraft(shotDraft)
             _uiState.value = CaptureUiStateMapper.savedConfirmation(
                 scaleConnectionLabel = _uiState.value.scaleConnectionLabel
@@ -113,6 +126,7 @@ class CaptureViewModel(
 
     private fun updateRecordingValues(reading: ScaleReading) {
         val sample = ScaleReadingMapper.toWeightSample(reading)
+        shotCaptureEngine.onWeightSample(sample.toCaptureSessionSample())
         val recordingStartMs = recordingStartTimestampMs ?: sample.timestampMs.also {
             recordingStartTimestampMs = it
         }
@@ -148,6 +162,48 @@ class CaptureViewModel(
             ScaleConnectionState.Connected -> "Scale: Connected"
             is ScaleConnectionState.Error -> "Scale: Error"
         }
+
+    private fun createArmedShotCaptureEngine(): ShotCaptureEngine =
+        ShotCaptureEngine().also { engine ->
+            engine.onScaleConnected()
+            engine.onTareConfirmed()
+            engine.arm(defaultCaptureTarget())
+        }
+
+    private fun defaultCaptureTarget(): CaptureTarget =
+        CaptureTarget(
+            source = ShotSource.QUICK_SHOT,
+            recipeId = null,
+            beanId = null,
+            doseG = 18.0,
+            targetRatio = 2.0,
+            targetYieldG = 36.0,
+            targetTimeS = null
+        )
+
+    private fun nextCaptureSessionStartedAtMs(): Long {
+        val nowMs = currentTimeMillis()
+        val previousSessionStartedAtMs = lastCaptureSessionStartedAtEpochMs
+        val sessionStartedAtMs = if (
+            previousSessionStartedAtMs != null &&
+            nowMs <= previousSessionStartedAtMs
+        ) {
+            previousSessionStartedAtMs + 1L
+        } else {
+            nowMs
+        }
+        lastCaptureSessionStartedAtEpochMs = sessionStartedAtMs
+        return sessionStartedAtMs
+    }
+
+    private fun WeightSample.toCaptureSessionSample(): WeightSample {
+        val sessionStartedAtMs = captureSessionStartedAtEpochMs ?: nextCaptureSessionStartedAtMs()
+        val firstReadingTimestampMs = firstScaleReadingTimestampMs ?: timestampMs.also {
+            firstScaleReadingTimestampMs = it
+        }
+        val elapsedMs = (timestampMs - firstReadingTimestampMs).coerceAtLeast(0L)
+        return copy(timestampMs = sessionStartedAtMs + elapsedMs)
+    }
 
     override fun onCleared() {
         stopRecordingReadingUpdates()
