@@ -4,9 +4,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
 import com.example.espressoshotcapture.MainActivity
-import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -55,21 +53,6 @@ class ShotHistoryScreenTest {
 
         composeTestRule.onNodeWithText("shot-3000").assertIsDisplayed()
         composeTestRule.onNodeWithText("3000").assertIsDisplayed()
-    }
-
-    @Test
-    fun debugActionCanBeClickedWhenProvided() {
-        var clickCount = 0
-        composeTestRule.activity.setContent {
-            ShotHistoryScreen(
-                items = emptyList(),
-                onAddTestShot = { clickCount += 1 }
-            )
-        }
-
-        composeTestRule.onNodeWithText("Add test shot").performClick()
-
-        assertEquals(1, clickCount)
     }
 
     private fun setHistoryContent(items: List<ShotHistoryItem>) {

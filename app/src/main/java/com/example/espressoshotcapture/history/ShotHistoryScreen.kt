@@ -1,7 +1,5 @@
 package com.example.espressoshotcapture.history
 
-import android.content.pm.ApplicationInfo
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -41,12 +39,9 @@ fun ShotHistoryRoute(
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val isDebuggable = LocalContext.current.applicationInfo.flags and
-        ApplicationInfo.FLAG_DEBUGGABLE != 0
 
     ShotHistoryScreen(
         uiState = uiState,
-        onAddTestShot = if (isDebuggable) viewModel::addTestShot else null,
         modifier = modifier
     )
 }
@@ -54,12 +49,10 @@ fun ShotHistoryRoute(
 @Composable
 fun ShotHistoryScreen(
     uiState: ShotHistoryUiState,
-    onAddTestShot: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     ShotHistoryScreen(
         items = uiState.items,
-        onAddTestShot = onAddTestShot,
         modifier = modifier
     )
 }
@@ -67,20 +60,9 @@ fun ShotHistoryScreen(
 @Composable
 fun ShotHistoryScreen(
     items: List<ShotHistoryItem>,
-    onAddTestShot: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier.fillMaxSize()) {
-        if (onAddTestShot != null) {
-            BasicText(
-                text = "Add test shot",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable(onClick = onAddTestShot)
-                    .padding(16.dp)
-            )
-        }
-
         if (items.isEmpty()) {
             BasicText(
                 text = "No saved shots",
