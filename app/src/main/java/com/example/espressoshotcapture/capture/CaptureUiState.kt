@@ -18,17 +18,20 @@ data class CaptureUiState(
 )
 
 object CaptureUiStateMapper {
-    fun initialDisconnectedReady(): CaptureUiState = CaptureUiState(
+    fun initialDisconnectedReady(): CaptureUiState =
+        ready(scaleConnectionLabel = "Scale: Not connected")
+
+    fun ready(scaleConnectionLabel: String): CaptureUiState = CaptureUiState(
         status = CaptureStatus.READY,
-        scaleConnectionLabel = "Scale: Not connected",
+        scaleConnectionLabel = scaleConnectionLabel,
         shotStatusLabel = "Ready",
         primaryActionLabel = "Start capture",
         isPrimaryActionEnabled = true
     )
 
-    fun recording(): CaptureUiState = CaptureUiState(
+    fun recording(scaleConnectionLabel: String = "Scale: Not connected"): CaptureUiState = CaptureUiState(
         status = CaptureStatus.RECORDING,
-        scaleConnectionLabel = "Scale: Not connected",
+        scaleConnectionLabel = scaleConnectionLabel,
         shotStatusLabel = "Recording",
         primaryActionLabel = "Stop & save",
         isPrimaryActionEnabled = true,
@@ -37,9 +40,9 @@ object CaptureUiStateMapper {
         averageFlowLabel = "Average flow: 1.3 g/s"
     )
 
-    fun savedConfirmation(): CaptureUiState = CaptureUiState(
+    fun savedConfirmation(scaleConnectionLabel: String = "Scale: Not connected"): CaptureUiState = CaptureUiState(
         status = CaptureStatus.SAVED,
-        scaleConnectionLabel = "Scale: Not connected",
+        scaleConnectionLabel = scaleConnectionLabel,
         shotStatusLabel = "Shot saved",
         primaryActionLabel = "Start capture",
         isPrimaryActionEnabled = false

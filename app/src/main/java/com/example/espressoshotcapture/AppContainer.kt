@@ -2,6 +2,8 @@ package com.example.espressoshotcapture
 
 import android.content.Context
 import androidx.room.Room
+import com.example.espressoshotcapture.capture.domain.FakeScaleClient
+import com.example.espressoshotcapture.capture.domain.ScaleClient
 import com.example.espressoshotcapture.persistence.EspressoShotDatabase
 import com.example.espressoshotcapture.repository.ShotRepository
 
@@ -22,5 +24,9 @@ class AppContainer(context: Context) {
 
     val shotRepository: ShotRepository by lazy {
         ShotRepository(shotDao)
+    }
+
+    val scaleClient: ScaleClient by lazy {
+        FakeScaleClient()
     }
 }

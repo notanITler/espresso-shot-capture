@@ -16,7 +16,7 @@ class EspressoShotCaptureAppTest {
     @Test
     fun appRootShowsCaptureSkeleton() {
         composeTestRule.onNodeWithText("Espresso Shot Capture").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Scale: Not connected").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Scale: Connected").assertIsDisplayed()
         composeTestRule.onNodeWithText("Start capture").assertIsDisplayed()
     }
 }

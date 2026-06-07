@@ -10,6 +10,8 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.espressoshotcapture.EspressoShotCaptureApplication
+import com.example.espressoshotcapture.capture.domain.ScaleClient
+import com.example.espressoshotcapture.capture.domain.ScaleConnectionState
 import com.example.espressoshotcapture.repository.ShotRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -21,12 +23,22 @@ import kotlinx.coroutines.launch
 
 class CaptureViewModel(
     private val shotRepository: ShotRepository,
+    private val scaleClient: ScaleClient,
     private val saveDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val currentTimeMillis: () -> Long = System::currentTimeMillis,
     private val savedConfirmationDelayMs: Long = 3_000L
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(CaptureUiStateMapper.initialDisconnectedReady())
     val uiState: StateFlow<CaptureUiState> = _uiState.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            scaleClient.connectionState.collect { connectionState ->
+                updateScaleConnectionLabel(connectionState.toScaleConnectionLabel())
+            }
+        }
+        scaleClient.connect()
+    }
 
     fun onPrimaryAction() {
         when (_uiState.value.status) {
@@ -37,26 +49,52 @@ class CaptureViewModel(
     }
 
     private fun startRecording() {
-        _uiState.value = CaptureUiStateMapper.recording()
+        _uiState.value = CaptureUiStateMapper.recording(
+            scaleConnectionLabel = _uiState.value.scaleConnectionLabel
+        )
     }
 
     private fun stopAndSave() {
         viewModelScope.launch(saveDispatcher) {
             val shotDraft = FakeCaptureShotDraftFactory.create(currentTimeMillis())
             shotRepository.saveShotDraft(shotDraft)
-            _uiState.value = CaptureUiStateMapper.savedConfirmation()
+            _uiState.value = CaptureUiStateMapper.savedConfirmation(
+                scaleConnectionLabel = _uiState.value.scaleConnectionLabel
+            )
             delay(savedConfirmationDelayMs)
-            _uiState.value = CaptureUiStateMapper.initialDisconnectedReady()
+            _uiState.value = CaptureUiStateMapper.ready(
+                scaleConnectionLabel = _uiState.value.scaleConnectionLabel
+            )
         }
     }
 
+    private fun updateScaleConnectionLabel(scaleConnectionLabel: String) {
+        _uiState.value = _uiState.value.copy(
+            scaleConnectionLabel = scaleConnectionLabel
+        )
+    }
+
+    private fun ScaleConnectionState.toScaleConnectionLabel(): String =
+        when (this) {
+            ScaleConnectionState.Disconnected -> "Scale: Not connected"
+            ScaleConnectionState.Connecting -> "Scale: Connecting"
+            ScaleConnectionState.Connected -> "Scale: Connected"
+            is ScaleConnectionState.Error -> "Scale: Error"
+        }
+
     companion object {
-        fun factory(shotRepository: ShotRepository): ViewModelProvider.Factory =
+        fun factory(
+            shotRepository: ShotRepository,
+            scaleClient: ScaleClient
+        ): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
                     if (modelClass.isAssignableFrom(CaptureViewModel::class.java)) {
-                        return CaptureViewModel(shotRepository) as T
+                        return CaptureViewModel(
+                            shotRepository = shotRepository,
+                            scaleClient = scaleClient
+                        ) as T
                     }
                     throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
                 }
@@ -71,7 +109,10 @@ fun CaptureRoute(
     val context = LocalContext.current
     val application = context.applicationContext as EspressoShotCaptureApplication
     val viewModel: CaptureViewModel = viewModel(
-        factory = CaptureViewModel.factory(application.appContainer.shotRepository)
+        factory = CaptureViewModel.factory(
+            shotRepository = application.appContainer.shotRepository,
+            scaleClient = application.appContainer.scaleClient
+        )
     )
 
     CaptureRoute(
