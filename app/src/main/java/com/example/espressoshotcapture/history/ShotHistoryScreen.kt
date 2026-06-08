@@ -1,5 +1,6 @@
 package com.example.espressoshotcapture.history
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -42,6 +43,7 @@ fun ShotHistoryRoute(
 
     ShotHistoryScreen(
         uiState = uiState,
+        onShotSelected = viewModel::selectShot,
         modifier = modifier
     )
 }
@@ -49,10 +51,13 @@ fun ShotHistoryRoute(
 @Composable
 fun ShotHistoryScreen(
     uiState: ShotHistoryUiState,
+    onShotSelected: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     ShotHistoryScreen(
         items = uiState.items,
+        selectedShotDetail = uiState.selectedShotDetail,
+        onShotSelected = onShotSelected,
         modifier = modifier
     )
 }
@@ -60,6 +65,8 @@ fun ShotHistoryScreen(
 @Composable
 fun ShotHistoryScreen(
     items: List<ShotHistoryItem>,
+    selectedShotDetail: ShotHistoryDetail? = null,
+    onShotSelected: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier.fillMaxSize()) {
@@ -69,24 +76,51 @@ fun ShotHistoryScreen(
                 modifier = Modifier.padding(16.dp)
             )
         } else {
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+            ) {
                 items(items = items, key = { item -> item.id }) { item ->
-                    ShotHistoryRow(item = item)
+                    ShotHistoryRow(
+                        item = item,
+                        onClick = { onShotSelected(item.id) }
+                    )
                 }
+            }
+            selectedShotDetail?.let { detail ->
+                ShotHistoryDetailView(detail = detail)
             }
         }
     }
 }
 
 @Composable
-private fun ShotHistoryRow(item: ShotHistoryItem) {
+private fun ShotHistoryRow(
+    item: ShotHistoryItem,
+    onClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(16.dp)
+    ) {
+        BasicText(text = item.id)
+        BasicText(text = item.createdAtEpochMillis.toString())
+    }
+}
+
+@Composable
+private fun ShotHistoryDetailView(detail: ShotHistoryDetail) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp)
     ) {
-        BasicText(text = item.id)
-        BasicText(text = item.createdAtEpochMillis.toString())
+        BasicText(text = "Selected shot: ${detail.id}")
+        BasicText(text = detail.createdAtEpochMillis.toString())
+        BasicText(text = detail.json)
     }
 }
 
@@ -104,6 +138,11 @@ private fun PopulatedShotHistoryScreenPreview() {
             items = listOf(
                 ShotHistoryItem(id = "shot-1000", createdAtEpochMillis = 1_000L),
                 ShotHistoryItem(id = "shot-2000", createdAtEpochMillis = 2_000L)
+            ),
+            selectedShotDetail = ShotHistoryDetail(
+                id = "shot-2000",
+                createdAtEpochMillis = 2_000L,
+                json = """{"schemaVersion":1,"shot":{"id":"shot-2000"}}"""
             )
         )
     )

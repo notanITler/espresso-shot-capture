@@ -45,13 +45,35 @@ class ShotHistoryStateMapperTest {
         )
     }
 
+    @Test
+    fun selectedShotDetailContainsEntityJson() {
+        val json = """{"schemaVersion":1,"shot":{"id":"shot-2"}}"""
+        val entities = listOf(
+            shotEntity(id = "shot-1", createdAtEpochMillis = 1_000L),
+            shotEntity(id = "shot-2", createdAtEpochMillis = 2_000L, json = json)
+        )
+
+        assertEquals(
+            ShotHistoryDetail(
+                id = "shot-2",
+                createdAtEpochMillis = 2_000L,
+                json = json
+            ),
+            ShotHistoryStateMapper.fromEntities(
+                entities = entities,
+                selectedShotId = "shot-2"
+            ).selectedShotDetail
+        )
+    }
+
     private fun shotEntity(
         id: String,
-        createdAtEpochMillis: Long
+        createdAtEpochMillis: Long,
+        json: String = """{"schemaVersion":1,"shot":{"id":"$id"}}"""
     ): ShotEntity =
         ShotEntity(
             id = id,
-            json = """{"schemaVersion":1,"shot":{"id":"$id"}}""",
+            json = json,
             createdAtEpochMillis = createdAtEpochMillis
         )
 }

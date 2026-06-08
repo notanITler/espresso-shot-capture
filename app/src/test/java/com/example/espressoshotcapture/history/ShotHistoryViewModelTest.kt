@@ -66,13 +66,41 @@ class ShotHistoryViewModelTest {
         )
     }
 
+    @Test
+    fun selectingShotShowsDetailFromRepositoryJson() = runTest(testDispatcher) {
+        val json = """{"schemaVersion":1,"shot":{"id":"shot-2","status":"COMPLETED"}}"""
+        dao.insertShot(shotEntity(id = "shot-1", createdAtEpochMillis = 1_000L))
+        dao.insertShot(
+            shotEntity(
+                id = "shot-2",
+                createdAtEpochMillis = 2_000L,
+                json = json
+            )
+        )
+
+        viewModel.selectShot("shot-2")
+
+        val uiState = viewModel.uiState
+            .first { state -> state.selectedShotDetail?.id == "shot-2" }
+
+        assertEquals(
+            ShotHistoryDetail(
+                id = "shot-2",
+                createdAtEpochMillis = 2_000L,
+                json = json
+            ),
+            uiState.selectedShotDetail
+        )
+    }
+
     private fun shotEntity(
         id: String,
-        createdAtEpochMillis: Long
+        createdAtEpochMillis: Long,
+        json: String = """{"schemaVersion":1,"shot":{"id":"$id"}}"""
     ): ShotEntity =
         ShotEntity(
             id = id,
-            json = """{"schemaVersion":1,"shot":{"id":"$id"}}""",
+            json = json,
             createdAtEpochMillis = createdAtEpochMillis
         )
 }
