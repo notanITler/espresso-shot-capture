@@ -10,13 +10,11 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.espressoshotcapture.EspressoShotCaptureApplication
-import com.example.espressoshotcapture.capture.domain.CaptureTarget
 import com.example.espressoshotcapture.capture.domain.FakeScaleClient
 import com.example.espressoshotcapture.capture.domain.ScaleClient
 import com.example.espressoshotcapture.capture.domain.ScaleConnectionState
 import com.example.espressoshotcapture.capture.domain.ScaleReading
 import com.example.espressoshotcapture.capture.domain.ScaleReadingMapper
-import com.example.espressoshotcapture.capture.domain.ShotSource
 import com.example.espressoshotcapture.capture.domain.WeightSample
 import com.example.espressoshotcapture.capture.engine.ShotCaptureEngine
 import com.example.espressoshotcapture.repository.ShotRepository
@@ -134,6 +132,8 @@ class CaptureViewModel(
 
         _uiState.value = _uiState.value.copy(
             currentWeightLabel = "Weight: ${sample.weightG.toOneDecimal()} g",
+            progressLabel = MvpShotTarget.progressLabel(sample.weightG),
+            targetReachedLabel = MvpShotTarget.targetReachedLabel(sample.weightG),
             flowTimeLabel = "Flow time: ${flowTimeMs / 1_000L} s",
             averageFlowLabel = "Average flow: ${sample.averageFlowGPerS(flowTimeMs).toOneDecimal()} g/s"
         )
@@ -167,19 +167,8 @@ class CaptureViewModel(
         ShotCaptureEngine().also { engine ->
             engine.onScaleConnected()
             engine.onTareConfirmed()
-            engine.arm(defaultCaptureTarget())
+            engine.arm(MvpShotTarget.toCaptureTarget())
         }
-
-    private fun defaultCaptureTarget(): CaptureTarget =
-        CaptureTarget(
-            source = ShotSource.QUICK_SHOT,
-            recipeId = null,
-            beanId = null,
-            doseG = 18.0,
-            targetRatio = 2.0,
-            targetYieldG = 36.0,
-            targetTimeS = null
-        )
 
     private fun nextCaptureSessionStartedAtMs(): Long {
         val nowMs = currentTimeMillis()

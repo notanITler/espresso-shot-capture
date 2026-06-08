@@ -124,6 +124,8 @@ class CaptureViewModelTest {
         runCurrent()
 
         assertEquals("Weight: 10.0 g", viewModel.uiState.value.currentWeightLabel)
+        assertEquals("Progress: 10.0 / 36.0 g", viewModel.uiState.value.progressLabel)
+        assertEquals("Target not reached", viewModel.uiState.value.targetReachedLabel)
         assertEquals("Flow time: 0 s", viewModel.uiState.value.flowTimeLabel)
         assertEquals("Average flow: 0.0 g/s", viewModel.uiState.value.averageFlowLabel)
 
@@ -133,8 +135,26 @@ class CaptureViewModelTest {
         runCurrent()
 
         assertEquals("Weight: 20.0 g", viewModel.uiState.value.currentWeightLabel)
+        assertEquals("Progress: 20.0 / 36.0 g", viewModel.uiState.value.progressLabel)
+        assertEquals("Target not reached", viewModel.uiState.value.targetReachedLabel)
         assertEquals("Flow time: 2 s", viewModel.uiState.value.flowTimeLabel)
         assertEquals("Average flow: 10.0 g/s", viewModel.uiState.value.averageFlowLabel)
+    }
+
+    @Test
+    fun targetReachedLabelUpdatesWhenWeightReachesTarget() = runTest(testDispatcher) {
+        runCurrent()
+        viewModel.onPrimaryAction()
+        runCurrent()
+
+        scaleClient.emitReading(
+            ScaleReading(timestampMillis = 1_000L, weightGrams = 36.0)
+        )
+        runCurrent()
+
+        assertEquals("Weight: 36.0 g", viewModel.uiState.value.currentWeightLabel)
+        assertEquals("Progress: 36.0 / 36.0 g", viewModel.uiState.value.progressLabel)
+        assertEquals("Target reached", viewModel.uiState.value.targetReachedLabel)
     }
 
     @Test
@@ -163,6 +183,9 @@ class CaptureViewModelTest {
         assertTrue(savedShot.json.contains(""""weightGRaw":3.5"""))
         assertTrue(savedShot.json.contains(""""sampleCount":1"""))
         assertTrue(savedShot.json.contains(""""status":"MANUAL_STOPPED""""))
+        assertTrue(savedShot.json.contains(""""doseG":18.0"""))
+        assertTrue(savedShot.json.contains(""""targetRatio":2.0"""))
+        assertTrue(savedShot.json.contains(""""targetYieldG":36.0"""))
     }
 
     @Test
@@ -187,6 +210,8 @@ class CaptureViewModelTest {
         runCurrent()
 
         assertEquals("Weight: 0.0 g", viewModel.uiState.value.currentWeightLabel)
+        assertEquals("Progress: 0.0 / 36.0 g", viewModel.uiState.value.progressLabel)
+        assertEquals("Target not reached", viewModel.uiState.value.targetReachedLabel)
         assertEquals("Flow time: 0 s", viewModel.uiState.value.flowTimeLabel)
         assertEquals("Average flow: 0.0 g/s", viewModel.uiState.value.averageFlowLabel)
 
@@ -194,6 +219,8 @@ class CaptureViewModelTest {
         runCurrent()
 
         assertEquals("Weight: 2.0 g", viewModel.uiState.value.currentWeightLabel)
+        assertEquals("Progress: 2.0 / 36.0 g", viewModel.uiState.value.progressLabel)
+        assertEquals("Target not reached", viewModel.uiState.value.targetReachedLabel)
         assertEquals("Flow time: 1 s", viewModel.uiState.value.flowTimeLabel)
         assertEquals("Average flow: 2.0 g/s", viewModel.uiState.value.averageFlowLabel)
 
@@ -201,6 +228,8 @@ class CaptureViewModelTest {
         runCurrent()
 
         assertEquals("Weight: 5.0 g", viewModel.uiState.value.currentWeightLabel)
+        assertEquals("Progress: 5.0 / 36.0 g", viewModel.uiState.value.progressLabel)
+        assertEquals("Target not reached", viewModel.uiState.value.targetReachedLabel)
         assertEquals("Flow time: 2 s", viewModel.uiState.value.flowTimeLabel)
         assertEquals("Average flow: 2.5 g/s", viewModel.uiState.value.averageFlowLabel)
 

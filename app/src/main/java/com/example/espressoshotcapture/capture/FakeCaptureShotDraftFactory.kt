@@ -1,10 +1,8 @@
 package com.example.espressoshotcapture.capture
 
 import com.example.espressoshotcapture.capture.domain.CapturedSample
-import com.example.espressoshotcapture.capture.domain.CaptureTarget
 import com.example.espressoshotcapture.capture.domain.ShotDraft
 import com.example.espressoshotcapture.capture.domain.ShotResult
-import com.example.espressoshotcapture.capture.domain.ShotSource
 import com.example.espressoshotcapture.capture.domain.ShotStatus
 import com.example.espressoshotcapture.capture.domain.ShotTiming
 import com.example.espressoshotcapture.capture.domain.StartMode
@@ -12,7 +10,7 @@ import com.example.espressoshotcapture.capture.domain.StopMode
 
 object FakeCaptureShotDraftFactory {
     fun create(createdAtEpochMs: Long): ShotDraft {
-        val targetYieldG = 36.0
+        val target = MvpShotTarget.toCaptureTarget()
         val actualYieldG = 36.8
         val samples = listOf(
             CapturedSample(
@@ -44,15 +42,7 @@ object FakeCaptureShotDraftFactory {
         return ShotDraft(
             id = "fake-shot-$createdAtEpochMs",
             createdAtEpochMs = createdAtEpochMs,
-            target = CaptureTarget(
-                source = ShotSource.QUICK_SHOT,
-                recipeId = null,
-                beanId = null,
-                doseG = 18.0,
-                targetRatio = 2.0,
-                targetYieldG = targetYieldG,
-                targetTimeS = null
-            ),
+            target = target,
             timing = ShotTiming(
                 startMode = StartMode.AUTO_WEIGHT,
                 stopMode = StopMode.MANUAL,
@@ -64,7 +54,7 @@ object FakeCaptureShotDraftFactory {
             ),
             result = ShotResult(
                 actualYieldG = actualYieldG,
-                postTargetDriftG = actualYieldG - targetYieldG,
+                postTargetDriftG = actualYieldG - target.targetYieldG,
                 averageFlowGPerS = 1.3,
                 maxFlowGPerS = null,
                 sampleCount = samples.size

@@ -12,6 +12,11 @@ data class CaptureUiState(
     val shotStatusLabel: String,
     val primaryActionLabel: String,
     val isPrimaryActionEnabled: Boolean,
+    val doseLabel: String = MvpShotTarget.DOSE_LABEL,
+    val targetYieldLabel: String = MvpShotTarget.TARGET_YIELD_LABEL,
+    val ratioLabel: String = MvpShotTarget.RATIO_LABEL,
+    val progressLabel: String = MvpShotTarget.EMPTY_PROGRESS_LABEL,
+    val targetReachedLabel: String = MvpShotTarget.TARGET_NOT_REACHED_LABEL,
     val currentWeightLabel: String? = null,
     val flowTimeLabel: String? = null,
     val averageFlowLabel: String? = null

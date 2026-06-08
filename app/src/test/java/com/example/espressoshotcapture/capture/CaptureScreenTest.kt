@@ -25,6 +25,11 @@ class CaptureScreenTest {
 
         composeTestRule.onNodeWithText("Espresso Shot Capture").assertIsDisplayed()
         composeTestRule.onNodeWithText("Scale: Not connected").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Dose: 18.0 g").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Target yield: 36.0 g").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Ratio: 1:2").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Progress: 0.0 / 36.0 g").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Target not reached").assertIsDisplayed()
         composeTestRule.onNodeWithText("Ready").assertIsDisplayed()
         composeTestRule.onNodeWithText("Start capture").assertIsDisplayed()
     }
@@ -38,6 +43,11 @@ class CaptureScreenTest {
         }
 
         composeTestRule.onNodeWithText("Scale: Not connected").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Dose: 18.0 g").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Target yield: 36.0 g").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Ratio: 1:2").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Progress: 0.0 / 36.0 g").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Target not reached").assertIsDisplayed()
         composeTestRule.onNodeWithText("Ready").assertIsDisplayed()
         composeTestRule.onNodeWithText("Start capture").assertIsDisplayed()
     }
@@ -75,8 +85,25 @@ class CaptureScreenTest {
         }
 
         composeTestRule.onNodeWithText("Weight: 0.0 g").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Progress: 0.0 / 36.0 g").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Target not reached").assertIsDisplayed()
         composeTestRule.onNodeWithText("Flow time: 0 s").assertIsDisplayed()
         composeTestRule.onNodeWithText("Average flow: 0.0 g/s").assertIsDisplayed()
+    }
+
+    @Test
+    fun targetReachedIsDisplayedWhenProvidedByUiState() {
+        composeTestRule.activity.setContent {
+            CaptureScreen(
+                uiState = CaptureUiStateMapper.recording().copy(
+                    currentWeightLabel = "Weight: 36.0 g",
+                    progressLabel = "Progress: 36.0 / 36.0 g",
+                    targetReachedLabel = "Target reached"
+                )
+            )
+        }
+
+        composeTestRule.onNodeWithText("Target reached").assertIsDisplayed()
     }
 
     @Test

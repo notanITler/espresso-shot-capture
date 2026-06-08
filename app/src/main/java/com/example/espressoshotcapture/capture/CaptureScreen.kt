@@ -23,6 +23,11 @@ fun CaptureScreen(
     ) {
         BasicText(text = "Espresso Shot Capture")
         BasicText(text = uiState.scaleConnectionLabel)
+        BasicText(text = uiState.doseLabel)
+        BasicText(text = uiState.targetYieldLabel)
+        BasicText(text = uiState.ratioLabel)
+        BasicText(text = uiState.progressLabel)
+        BasicText(text = uiState.targetReachedLabel)
         BasicText(text = uiState.shotStatusLabel)
         uiState.currentWeightLabel?.let { label ->
             BasicText(text = label)
