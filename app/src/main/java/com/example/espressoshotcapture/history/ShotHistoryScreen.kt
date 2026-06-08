@@ -19,10 +19,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.espressoshotcapture.EspressoShotCaptureApplication
+
+private const val MAX_VISIBLE_HISTORY_ROWS = 5
 
 @Composable
 fun ShotHistoryRoute(
@@ -76,18 +81,24 @@ fun ShotHistoryScreen(
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier.fillMaxSize()) {
+        BasicText(
+            text = "Recent Shot History",
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            style = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+        )
         if (items.isEmpty()) {
             BasicText(
                 text = "No saved shots",
-                modifier = Modifier.padding(16.dp)
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             )
         } else {
+            val visibleItems = items.take(MAX_VISIBLE_HISTORY_ROWS)
             LazyColumn(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
             ) {
-                items(items = items, key = { item -> item.id }) { item ->
+                items(items = visibleItems, key = { item -> item.id }) { item ->
                     ShotHistoryRow(
                         item = item,
                         onClick = { onShotSelected(item.id) }
@@ -110,10 +121,12 @@ private fun ShotHistoryRow(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(16.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
         BasicText(text = item.id)
-        BasicText(text = item.createdAtEpochMillis.toString())
+        BasicText(
+            text = "${item.finalYieldLabel}  |  ${item.flowTimeLabel}  |  ${item.targetYieldLabel}"
+        )
     }
 }
 
@@ -124,12 +137,24 @@ private fun ShotHistoryDetailView(detail: ShotHistoryDetail) {
             .fillMaxWidth()
             .padding(16.dp)
     ) {
-        BasicText(text = "Selected shot: ${detail.id}")
-        BasicText(text = detail.createdAtEpochMillis.toString())
+        BasicText(
+            text = "Selected Shot Detail",
+            style = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+        )
+        BasicText(text = "id: ${detail.id}")
+        BasicText(text = "createdAtEpochMillis: ${detail.createdAtEpochMillis}")
+        BasicText(text = detail.finalYieldLabel)
+        BasicText(text = detail.flowTimeLabel)
+        BasicText(text = detail.targetYieldLabel)
+        BasicText(
+            text = "Raw JSON / debug detail",
+            modifier = Modifier.padding(top = 8.dp),
+            style = TextStyle(fontWeight = FontWeight.SemiBold)
+        )
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(max = 220.dp)
+                .heightIn(max = 160.dp)
                 .padding(top = 8.dp)
                 .border(width = 1.dp, color = Color.LightGray)
                 .verticalScroll(rememberScrollState())
@@ -152,8 +177,20 @@ private fun PopulatedShotHistoryScreenPreview() {
     ShotHistoryScreen(
         uiState = ShotHistoryUiState(
             items = listOf(
-                ShotHistoryItem(id = "shot-1000", createdAtEpochMillis = 1_000L),
-                ShotHistoryItem(id = "shot-2000", createdAtEpochMillis = 2_000L)
+                ShotHistoryItem(
+                    id = "shot-1000",
+                    createdAtEpochMillis = 1_000L,
+                    finalYieldLabel = "Yield: 36.8 g",
+                    flowTimeLabel = "Flow time: 28 s",
+                    targetYieldLabel = "Target: 36.0 g"
+                ),
+                ShotHistoryItem(
+                    id = "shot-2000",
+                    createdAtEpochMillis = 2_000L,
+                    finalYieldLabel = "Yield: 37.2 g",
+                    flowTimeLabel = "Flow time: 29 s",
+                    targetYieldLabel = "Target: 36.0 g"
+                )
             ),
             selectedShotDetail = ShotHistoryDetail(
                 id = "shot-2000",

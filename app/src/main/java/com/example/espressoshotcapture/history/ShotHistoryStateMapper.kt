@@ -15,9 +15,14 @@ object ShotHistoryStateMapper {
         )
 
     private fun ShotEntity.toDetail(): ShotHistoryDetail =
-        ShotHistoryDetail(
-            id = id,
-            createdAtEpochMillis = createdAtEpochMillis,
-            json = json
-        )
+        ShotHistoryMapper.fromEntity(this).let { item ->
+            ShotHistoryDetail(
+                id = id,
+                createdAtEpochMillis = createdAtEpochMillis,
+                json = json,
+                finalYieldLabel = item.finalYieldLabel,
+                flowTimeLabel = item.flowTimeLabel,
+                targetYieldLabel = item.targetYieldLabel
+            )
+        }
 }

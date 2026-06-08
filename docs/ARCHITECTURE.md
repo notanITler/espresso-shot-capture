@@ -95,6 +95,14 @@ Each fake capture session resets/recreates session state before recording. This 
 
 This fake recording path is only a local MVP simulation. Real BLE connection handling and Half Decent packet parsing are still future work.
 
+The current root UI is still a one-screen MVP structure, not final navigation. It is arranged in this order:
+
+1. Capture section at the top, visually primary, showing connection state, fixed target, live progress, recording values, and the manual capture action.
+2. Recent Shot History below capture, compact and newest-first, limited to the most recent rows needed for smoke testing.
+3. Selected Shot Detail / debug section below history, showing compact saved-shot fields and a bounded raw JSON area.
+
+The raw JSON detail is intentionally developer/MVP inspection UI. It exists to verify the canonical saved payload before a final shot-detail screen, navigation, export/share flow, or richer visual presentation is added.
+
 ### Test Utilities
 
 Package: `com.example.espressoshotcapture.capture.testutil`

@@ -84,11 +84,11 @@ class CaptureScreenTest {
             CaptureScreen(uiState = CaptureUiStateMapper.recording())
         }
 
-        composeTestRule.onNodeWithText("Weight: 0.0 g").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Weight: 0.0 g", substring = true).assertIsDisplayed()
         composeTestRule.onNodeWithText("Progress: 0.0 / 36.0 g").assertIsDisplayed()
         composeTestRule.onNodeWithText("Target not reached").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Flow time: 0 s").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Average flow: 0.0 g/s").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Flow time: 0 s", substring = true).assertIsDisplayed()
+        composeTestRule.onNodeWithText("Average flow: 0.0 g/s", substring = true).assertIsDisplayed()
     }
 
     @Test

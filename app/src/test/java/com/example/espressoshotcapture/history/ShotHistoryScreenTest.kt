@@ -2,8 +2,10 @@ package com.example.espressoshotcapture.history
 
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.example.espressoshotcapture.MainActivity
@@ -30,15 +32,22 @@ class ShotHistoryScreenTest {
     fun rowsDisplayedWhenItemsExist() {
         setHistoryContent(
             items = listOf(
-                ShotHistoryItem(id = "shot-1000", createdAtEpochMillis = 1_000L),
+                ShotHistoryItem(
+                    id = "shot-1000",
+                    createdAtEpochMillis = 1_000L,
+                    finalYieldLabel = "Yield: 36.8 g",
+                    flowTimeLabel = "Flow time: 28 s",
+                    targetYieldLabel = "Target: 36.0 g"
+                ),
                 ShotHistoryItem(id = "shot-2000", createdAtEpochMillis = 2_000L)
             )
         )
 
         composeTestRule.onNodeWithText("shot-1000").assertIsDisplayed()
-        composeTestRule.onNodeWithText("1000").assertIsDisplayed()
+        composeTestRule.onNodeWithText(
+            "Yield: 36.8 g  |  Flow time: 28 s  |  Target: 36.0 g"
+        ).assertIsDisplayed()
         composeTestRule.onNodeWithText("shot-2000").assertIsDisplayed()
-        composeTestRule.onNodeWithText("2000").assertIsDisplayed()
     }
 
     @Test
@@ -54,7 +63,24 @@ class ShotHistoryScreenTest {
         }
 
         composeTestRule.onNodeWithText("shot-3000").assertIsDisplayed()
-        composeTestRule.onNodeWithText("3000").assertIsDisplayed()
+    }
+
+    @Test
+    fun longHistoryOnlyShowsNewestFiveRows() {
+        setHistoryContent(
+            items = listOf(
+                ShotHistoryItem(id = "shot-6", createdAtEpochMillis = 6_000L),
+                ShotHistoryItem(id = "shot-5", createdAtEpochMillis = 5_000L),
+                ShotHistoryItem(id = "shot-4", createdAtEpochMillis = 4_000L),
+                ShotHistoryItem(id = "shot-3", createdAtEpochMillis = 3_000L),
+                ShotHistoryItem(id = "shot-2", createdAtEpochMillis = 2_000L),
+                ShotHistoryItem(id = "shot-1", createdAtEpochMillis = 1_000L)
+            )
+        )
+
+        composeTestRule.onNodeWithText("shot-6").assertIsDisplayed()
+        composeTestRule.onNodeWithText("shot-2").assertIsDisplayed()
+        composeTestRule.onAllNodesWithText("shot-1").assertCountEquals(0)
     }
 
     @Test
@@ -74,7 +100,10 @@ class ShotHistoryScreenTest {
                     selectedDetail.value = ShotHistoryDetail(
                         id = item.id,
                         createdAtEpochMillis = item.createdAtEpochMillis,
-                        json = json
+                        json = json,
+                        finalYieldLabel = "Yield: 36.8 g",
+                        flowTimeLabel = "Flow time: 28 s",
+                        targetYieldLabel = "Target: 36.0 g"
                     )
                 }
             )
@@ -82,7 +111,13 @@ class ShotHistoryScreenTest {
 
         composeTestRule.onNodeWithText("shot-2000").performClick()
 
-        composeTestRule.onNodeWithText("Selected shot: shot-2000").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Selected Shot Detail").assertIsDisplayed()
+        composeTestRule.onNodeWithText("id: shot-2000").assertIsDisplayed()
+        composeTestRule.onNodeWithText("createdAtEpochMillis: 2000").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Yield: 36.8 g").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Flow time: 28 s").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Target: 36.0 g").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Raw JSON / debug detail").assertIsDisplayed()
         composeTestRule.onNodeWithText(json).assertIsDisplayed()
     }
 

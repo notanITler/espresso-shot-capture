@@ -8,5 +8,8 @@ data class ShotHistoryUiState(
 data class ShotHistoryDetail(
     val id: String,
     val createdAtEpochMillis: Long,
-    val json: String
+    val json: String,
+    val finalYieldLabel: String = ShotHistoryMapper.UNKNOWN_YIELD_LABEL,
+    val flowTimeLabel: String = ShotHistoryMapper.UNKNOWN_FLOW_TIME_LABEL,
+    val targetYieldLabel: String = ShotHistoryMapper.UNKNOWN_TARGET_YIELD_LABEL
 )
