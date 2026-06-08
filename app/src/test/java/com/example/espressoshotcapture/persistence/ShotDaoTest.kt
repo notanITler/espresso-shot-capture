@@ -53,22 +53,25 @@ class ShotDaoTest {
     }
 
     @Test
-    fun getAllShotsReturnsInsertedShots() {
+    fun getAllShotsReturnsNewestShotsFirst() {
         val first = shotEntity(id = "shot-1", createdAtEpochMillis = 1_000L)
         val second = shotEntity(id = "shot-2", createdAtEpochMillis = 2_000L)
 
         dao.insertShot(second)
         dao.insertShot(first)
 
-        assertEquals(listOf(first, second), dao.getAllShotsOnce())
+        assertEquals(listOf(second, first), dao.getAllShotsOnce())
     }
 
     @Test
-    fun observeShotsEmitsInsertedShots() = runTest {
-        val shot = shotEntity(id = "shot-1")
-        dao.insertShot(shot)
+    fun observeShotsEmitsNewestShotsFirst() = runTest {
+        val first = shotEntity(id = "shot-1", createdAtEpochMillis = 1_000L)
+        val second = shotEntity(id = "shot-2", createdAtEpochMillis = 2_000L)
 
-        assertEquals(listOf(shot), dao.observeShots().first())
+        dao.insertShot(first)
+        dao.insertShot(second)
+
+        assertEquals(listOf(second, first), dao.observeShots().first())
     }
 
     @Test

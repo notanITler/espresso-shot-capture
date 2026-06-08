@@ -46,7 +46,7 @@ class ShotHistoryViewModelTest {
     }
 
     @Test
-    fun repositoryEmissionsPreserveOrderAndMapIdsAndCreatedAtEpochMillis() = runTest(testDispatcher) {
+    fun repositoryEmissionsShowNewestShotsFirstAndMapIdsAndCreatedAtEpochMillis() = runTest(testDispatcher) {
         dao.insertShot(shotEntity(id = "shot-3", createdAtEpochMillis = 3_000L))
         dao.insertShot(shotEntity(id = "shot-1", createdAtEpochMillis = 1_000L))
         dao.insertShot(shotEntity(id = "shot-2", createdAtEpochMillis = 2_000L))
@@ -58,8 +58,8 @@ class ShotHistoryViewModelTest {
             ShotHistoryUiState(
                 items = listOf(
                     ShotHistoryItem(id = "shot-3", createdAtEpochMillis = 3_000L),
-                    ShotHistoryItem(id = "shot-1", createdAtEpochMillis = 1_000L),
-                    ShotHistoryItem(id = "shot-2", createdAtEpochMillis = 2_000L)
+                    ShotHistoryItem(id = "shot-2", createdAtEpochMillis = 2_000L),
+                    ShotHistoryItem(id = "shot-1", createdAtEpochMillis = 1_000L)
                 )
             ),
             uiState
@@ -84,7 +84,7 @@ private class FakeShotDao : ShotDao {
     override fun insertShot(entity: ShotEntity) {
         shots.removeAll { shot -> shot.id == entity.id }
         shots.add(entity)
-        shotsFlow.value = shots.toList()
+        shotsFlow.value = orderedShots()
     }
 
     override fun observeShots(): Flow<List<ShotEntity>> = shotsFlow
@@ -93,10 +93,13 @@ private class FakeShotDao : ShotDao {
         shots.firstOrNull { shot -> shot.id == id }
 
     override fun getAllShotsOnce(): List<ShotEntity> =
-        shots.toList()
+        orderedShots()
 
     override fun deleteShotById(id: String) {
         shots.removeAll { shot -> shot.id == id }
-        shotsFlow.value = shots.toList()
+        shotsFlow.value = orderedShots()
     }
+
+    private fun orderedShots(): List<ShotEntity> =
+        shots.sortedByDescending { shot -> shot.createdAtEpochMillis }
 }

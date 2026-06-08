@@ -11,13 +11,13 @@ interface ShotDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insertShot(entity: ShotEntity)
 
-    @Query("SELECT * FROM shots")
+    @Query("SELECT * FROM shots ORDER BY createdAtEpochMillis DESC")
     fun observeShots(): Flow<List<ShotEntity>>
 
     @Query("SELECT * FROM shots WHERE id = :id LIMIT 1")
     fun getShotById(id: String): ShotEntity?
 
-    @Query("SELECT * FROM shots ORDER BY createdAtEpochMillis ASC")
+    @Query("SELECT * FROM shots ORDER BY createdAtEpochMillis DESC")
     fun getAllShotsOnce(): List<ShotEntity>
 
     fun getAllShots(): List<ShotEntity> = getAllShotsOnce()

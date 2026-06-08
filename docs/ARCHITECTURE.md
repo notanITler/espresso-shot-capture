@@ -78,19 +78,22 @@ History UI consumes this layer through `ShotHistoryViewModel`, which observes `S
 
 Package: `com.example.espressoshotcapture.capture`
 
-The current app root shows a minimal capture screen plus shot history. Real scale capture is not wired yet. For MVP smoke testing, `CaptureViewModel` supports a manual fake capture flow:
+The current app root shows a minimal capture screen plus shot history. Production scale capture is not wired yet. For MVP smoke testing, `CaptureViewModel` supports an engine-backed fake capture flow:
 
 1. The user taps `Start capture`.
-2. `CaptureViewModel` moves from Ready to Recording.
-3. The ViewModel starts a fake reading loop against `FakeScaleClient`.
-4. Deterministic `ScaleReading` values are mapped toward capture-style sample data and used to update `CaptureUiState`.
-5. The screen displays current weight, flow time, and average flow from `CaptureUiState`.
-6. The user taps `Stop & save`.
-7. `CaptureViewModel` creates a fake but valid `ShotDraft` through `FakeCaptureShotDraftFactory`.
-8. The draft is saved through `ShotRepository.saveShotDraft(...)`.
-9. History updates through the existing repository and Room observation path.
+2. `CaptureViewModel` creates a fresh capture session and a fresh armed `ShotCaptureEngine`.
+3. The ViewModel moves from Ready to Recording.
+4. The ViewModel starts a fake reading loop against `FakeScaleClient`.
+5. Deterministic `ScaleReading` values are mapped to `WeightSample` values with `ScaleReadingMapper`.
+6. The mapped samples are fed through `ShotCaptureEngine`.
+7. The same readings update `CaptureUiState`, so the screen displays current weight, flow time, and average flow.
+8. The user taps `Stop & save`.
+9. `CaptureViewModel` saves the engine-produced `ShotDraft` through `ShotRepository.saveShotDraft(...)`.
+10. The repository maps the draft to canonical JSON, stores it in Room, and history updates through the existing observation path.
 
-This fake recording path is only a local MVP simulation. Real BLE connection handling, Half Decent packet parsing, and real `ShotCaptureEngine` wiring are still future work.
+Each fake capture session resets/recreates session state before recording. This keeps the fake scale sequence deterministic while still producing a distinct `ShotDraft` id for each saved shot, so consecutive sessions persist as separate history rows.
+
+This fake recording path is only a local MVP simulation. Real BLE connection handling and Half Decent packet parsing are still future work.
 
 ### Test Utilities
 
@@ -124,11 +127,12 @@ flowchart TD
     S --> T["ShotHistoryViewModel"]
     T --> U["ShotHistoryUiState"]
 
-    V["Start capture"] --> W["CaptureViewModel Recording"]
-    X["FakeScaleClient deterministic readings"] --> W
-    W --> Y["CaptureUiState weight / flow time / average flow"]
-    W -->|"Stop & save"| AA["FakeCaptureShotDraftFactory"]
-    AA --> O
+    V["Start capture"] --> W["Fresh fake capture session"]
+    W --> X["Fresh armed ShotCaptureEngine"]
+    Y["FakeScaleClient deterministic readings"] --> Z2["ScaleReadingMapper"]
+    Z2 --> X
+    Z2 --> AA["CaptureUiState weight / flow time / average flow"]
+    X -->|"Stop & save"| L
 ```
 
 ## Boundaries
@@ -137,7 +141,6 @@ Current implementation deliberately excludes:
 
 - BLE scale implementation
 - Half Decent protocol parsing
-- Real `ShotCaptureEngine` wiring into the capture UI
 - File export and share flows
 - Import tooling
 

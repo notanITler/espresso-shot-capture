@@ -56,6 +56,17 @@ class ShotRepositoryTest {
     }
 
     @Test
+    fun observingShotsEmitsNewestShotsFirst() = runTest {
+        val older = shotEntity(id = "shot-1", createdAtEpochMillis = 1_000L)
+        val newer = shotEntity(id = "shot-2", createdAtEpochMillis = 2_000L)
+
+        repository.saveShot(older)
+        repository.saveShot(newer)
+
+        assertEquals(listOf(newer, older), repository.observeShots().first())
+    }
+
+    @Test
     fun insertedEntityDataIsPreserved() = runTest {
         val shot = shotEntity(
             id = "shot-1",
