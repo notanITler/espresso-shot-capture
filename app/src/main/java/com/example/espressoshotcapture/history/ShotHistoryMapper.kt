@@ -14,6 +14,8 @@ object ShotHistoryMapper {
     const val UNKNOWN_YIELD_LABEL: String = "Yield: --"
     const val UNKNOWN_FLOW_TIME_LABEL: String = "Flow time: --"
     const val UNKNOWN_TARGET_YIELD_LABEL: String = "Target: --"
+    const val UNKNOWN_AVERAGE_FLOW_LABEL: String = "Average flow: --"
+    const val UNKNOWN_TARGET_REACHED_LABEL: String = "Target reached: --"
 
     fun fromEntity(entity: ShotEntity): ShotHistoryItem =
         summaryFromJson(entity.json).let { summary ->
@@ -29,18 +31,32 @@ object ShotHistoryMapper {
     fun fromEntities(entities: List<ShotEntity>): List<ShotHistoryItem> =
         entities.map(::fromEntity)
 
-    private fun summaryFromJson(json: String): ShotHistorySummary {
+    fun summaryFromJson(json: String): ShotHistorySummary {
         val shot = runCatching {
             Json.parseToJsonElement(json).jsonObject["shot"]?.jsonObject
         }.getOrNull() ?: return ShotHistorySummary()
 
+        val result = shot.objectAt("result")
+        val timing = shot.objectAt("timing")
         val actualYieldG = shot.objectAt("result")?.doubleAt("actualYieldG")
             ?: shot.arrayAt("samples")
                 ?.lastOrNull()
                 ?.let { sample -> sample as? JsonObject }
                 ?.doubleAt("weightGRaw")
-        val flowTimeMs = shot.objectAt("timing")?.longAt("flowTimeMs")
+        val flowTimeMs = timing?.longAt("flowTimeMs")
         val targetYieldG = shot.objectAt("target")?.doubleAt("targetYieldG")
+        val averageFlowGPerS = result?.doubleAt("averageFlowGPerS")
+        val targetReachedLabel = timing?.let { timingObject ->
+            if ("targetReachedAtMs" in timingObject) {
+                if (timingObject.longAt("targetReachedAtMs") != null) {
+                    "Target reached: yes"
+                } else {
+                    "Target reached: no"
+                }
+            } else {
+                UNKNOWN_TARGET_REACHED_LABEL
+            }
+        } ?: UNKNOWN_TARGET_REACHED_LABEL
 
         return ShotHistorySummary(
             finalYieldLabel = actualYieldG?.let { yield -> "Yield: ${yield.toOneDecimal()} g" }
@@ -48,14 +64,19 @@ object ShotHistoryMapper {
             flowTimeLabel = flowTimeMs?.let { timeMs -> "Flow time: ${timeMs / 1_000L} s" }
                 ?: UNKNOWN_FLOW_TIME_LABEL,
             targetYieldLabel = targetYieldG?.let { target -> "Target: ${target.toOneDecimal()} g" }
-                ?: UNKNOWN_TARGET_YIELD_LABEL
+                ?: UNKNOWN_TARGET_YIELD_LABEL,
+            averageFlowLabel = averageFlowGPerS?.let { flow -> "Average flow: ${flow.toOneDecimal()} g/s" }
+                ?: UNKNOWN_AVERAGE_FLOW_LABEL,
+            targetReachedLabel = targetReachedLabel
         )
     }
 
-    private data class ShotHistorySummary(
+    data class ShotHistorySummary(
         val finalYieldLabel: String = UNKNOWN_YIELD_LABEL,
         val flowTimeLabel: String = UNKNOWN_FLOW_TIME_LABEL,
-        val targetYieldLabel: String = UNKNOWN_TARGET_YIELD_LABEL
+        val targetYieldLabel: String = UNKNOWN_TARGET_YIELD_LABEL,
+        val averageFlowLabel: String = UNKNOWN_AVERAGE_FLOW_LABEL,
+        val targetReachedLabel: String = UNKNOWN_TARGET_REACHED_LABEL
     )
 
     private fun JsonObject.objectAt(key: String): JsonObject? =

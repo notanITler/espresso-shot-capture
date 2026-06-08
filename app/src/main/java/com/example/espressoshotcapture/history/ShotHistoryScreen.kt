@@ -145,7 +145,9 @@ private fun ShotHistoryDetailView(detail: ShotHistoryDetail) {
         BasicText(text = "createdAtEpochMillis: ${detail.createdAtEpochMillis}")
         BasicText(text = detail.finalYieldLabel)
         BasicText(text = detail.flowTimeLabel)
+        BasicText(text = detail.averageFlowLabel)
         BasicText(text = detail.targetYieldLabel)
+        BasicText(text = detail.targetReachedLabel)
         BasicText(
             text = "Raw JSON / debug detail",
             modifier = Modifier.padding(top = 8.dp),
@@ -195,7 +197,12 @@ private fun PopulatedShotHistoryScreenPreview() {
             selectedShotDetail = ShotHistoryDetail(
                 id = "shot-2000",
                 createdAtEpochMillis = 2_000L,
-                json = """{"schemaVersion":1,"shot":{"id":"shot-2000"}}"""
+                json = """{"schemaVersion":1,"shot":{"id":"shot-2000"}}""",
+                finalYieldLabel = "Yield: 37.2 g",
+                flowTimeLabel = "Flow time: 29 s",
+                targetYieldLabel = "Target: 36.0 g",
+                averageFlowLabel = "Average flow: --",
+                targetReachedLabel = "Target reached: yes"
             )
         )
     )

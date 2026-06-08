@@ -52,6 +52,51 @@ class ShotHistoryMapperTest {
     }
 
     @Test
+    fun extractsExtendedSummaryFromValidShotJson() {
+        val summary = ShotHistoryMapper.summaryFromJson(
+            """
+                {
+                  "schemaVersion": 1,
+                  "shot": {
+                    "target": { "targetYieldG": 36.0 },
+                    "timing": {
+                      "flowTimeMs": 28000,
+                      "targetReachedAtMs": 24000
+                    },
+                    "result": {
+                      "actualYieldG": 37.2,
+                      "averageFlowGPerS": 1.28
+                    },
+                    "samples": []
+                  }
+                }
+            """.trimIndent()
+        )
+
+        assertEquals("Yield: 37.2 g", summary.finalYieldLabel)
+        assertEquals("Flow time: 28 s", summary.flowTimeLabel)
+        assertEquals("Average flow: 1.3 g/s", summary.averageFlowLabel)
+        assertEquals("Target: 36.0 g", summary.targetYieldLabel)
+        assertEquals("Target reached: yes", summary.targetReachedLabel)
+    }
+
+    @Test
+    fun nullTargetReachedIsShownAsNotReached() {
+        val summary = ShotHistoryMapper.summaryFromJson(
+            """
+                {
+                  "schemaVersion": 1,
+                  "shot": {
+                    "timing": { "targetReachedAtMs": null }
+                  }
+                }
+            """.trimIndent()
+        )
+
+        assertEquals("Target reached: no", summary.targetReachedLabel)
+    }
+
+    @Test
     fun usesLastSampleWeightWhenActualYieldIsMissing() {
         val entity = shotEntity(
             id = "shot-1",

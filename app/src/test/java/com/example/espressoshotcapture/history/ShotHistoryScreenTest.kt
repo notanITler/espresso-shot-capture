@@ -103,7 +103,9 @@ class ShotHistoryScreenTest {
                         json = json,
                         finalYieldLabel = "Yield: 36.8 g",
                         flowTimeLabel = "Flow time: 28 s",
-                        targetYieldLabel = "Target: 36.0 g"
+                        targetYieldLabel = "Target: 36.0 g",
+                        averageFlowLabel = "Average flow: 1.3 g/s",
+                        targetReachedLabel = "Target reached: yes"
                     )
                 }
             )
@@ -116,7 +118,9 @@ class ShotHistoryScreenTest {
         composeTestRule.onNodeWithText("createdAtEpochMillis: 2000").assertIsDisplayed()
         composeTestRule.onNodeWithText("Yield: 36.8 g").assertIsDisplayed()
         composeTestRule.onNodeWithText("Flow time: 28 s").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Average flow: 1.3 g/s").assertIsDisplayed()
         composeTestRule.onNodeWithText("Target: 36.0 g").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Target reached: yes").assertIsDisplayed()
         composeTestRule.onNodeWithText("Raw JSON / debug detail").assertIsDisplayed()
         composeTestRule.onNodeWithText(json).assertIsDisplayed()
     }

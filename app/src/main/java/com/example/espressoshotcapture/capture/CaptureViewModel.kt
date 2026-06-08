@@ -36,7 +36,14 @@ class CaptureViewModel(
     private val currentTimeMillis: () -> Long = System::currentTimeMillis,
     private val savedConfirmationDelayMs: Long = 3_000L
 ) : ViewModel() {
-    private val _uiState = MutableStateFlow(CaptureUiStateMapper.initialDisconnectedReady())
+    private val scaleModeLabel: String? = if (scaleClient is FakeScaleClient) {
+        "Fake scale simulation"
+    } else {
+        null
+    }
+    private val _uiState = MutableStateFlow(
+        CaptureUiStateMapper.initialDisconnectedReady(scaleModeLabel = scaleModeLabel)
+    )
     val uiState: StateFlow<CaptureUiState> = _uiState.asStateFlow()
     private var recordingReadingsJob: Job? = null
     private var fakeReadingEmissionJob: Job? = null
@@ -69,7 +76,8 @@ class CaptureViewModel(
         captureSessionStartedAtEpochMs = nextCaptureSessionStartedAtMs()
         shotCaptureEngine = createArmedShotCaptureEngine()
         _uiState.value = CaptureUiStateMapper.recording(
-            scaleConnectionLabel = _uiState.value.scaleConnectionLabel
+            scaleConnectionLabel = _uiState.value.scaleConnectionLabel,
+            scaleModeLabel = _uiState.value.scaleModeLabel
         )
         startRecordingReadingUpdates()
     }
@@ -83,11 +91,13 @@ class CaptureViewModel(
                 ?: error("Unable to create shot draft from capture engine")
             shotRepository.saveShotDraft(shotDraft)
             _uiState.value = CaptureUiStateMapper.savedConfirmation(
-                scaleConnectionLabel = _uiState.value.scaleConnectionLabel
+                scaleConnectionLabel = _uiState.value.scaleConnectionLabel,
+                scaleModeLabel = _uiState.value.scaleModeLabel
             )
             delay(savedConfirmationDelayMs)
             _uiState.value = CaptureUiStateMapper.ready(
-                scaleConnectionLabel = _uiState.value.scaleConnectionLabel
+                scaleConnectionLabel = _uiState.value.scaleConnectionLabel,
+                scaleModeLabel = _uiState.value.scaleModeLabel
             )
         }
     }

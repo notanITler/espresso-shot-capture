@@ -86,6 +86,20 @@ class CaptureViewModelTest {
     }
 
     @Test
+    fun fakeScaleClientShowsSimulationLabel() = runTest(testDispatcher) {
+        viewModel = CaptureViewModel(
+            shotRepository = ShotRepository(dao),
+            scaleClient = FakeScaleClient(),
+            saveDispatcher = testDispatcher,
+            currentTimeMillis = { 123_456L },
+            savedConfirmationDelayMs = 1_000L
+        )
+        runCurrent()
+
+        assertEquals("Fake scale simulation", viewModel.uiState.value.scaleModeLabel)
+    }
+
+    @Test
     fun disconnectedStateShowsNotConnectedLabel() = runTest(testDispatcher) {
         scaleClient.emitConnectionState(ScaleConnectionState.Disconnected)
         runCurrent()

@@ -72,7 +72,7 @@ Current persistence types:
 - `ShotEntityMapper`: pure mapper that converts a `ShotDraft` into `ShotEntity` by using `ShotDraftJsonExporter.export(...)`.
 - `ShotRepository`: thin app-facing data abstraction over `ShotDao`. It exposes shot observation and save methods, including `saveShotDraft(...)`.
 
-History UI consumes this layer through `ShotHistoryViewModel`, which observes `ShotRepository.observeShots()`, maps entities with `ShotHistoryStateMapper.fromEntities(...)`, and exposes `ShotHistoryUiState`.
+History UI consumes this layer through `ShotHistoryViewModel`, which observes `ShotRepository.observeShots()`, maps entities with `ShotHistoryStateMapper.fromEntities(...)`, and exposes `ShotHistoryUiState`. Room still stores the canonical `ShotDraft` JSON internally, but the UI does not treat raw JSON as the saved-shot experience. The history mapping path parses the saved JSON into readable row and selected-detail display models, including yield, flow time, average flow when available, target yield, and target-reached status.
 
 ### Capture UI Layer
 
@@ -99,9 +99,9 @@ The current root UI is still a one-screen MVP structure, not final navigation. I
 
 1. Capture section at the top, visually primary, showing connection state, fixed target, live progress, recording values, and the manual capture action.
 2. Recent Shot History below capture, compact and newest-first, limited to the most recent rows needed for smoke testing.
-3. Selected Shot Detail / debug section below history, showing compact saved-shot fields and a bounded raw JSON area.
+3. Selected Shot Detail / debug section below history, prioritizing readable saved-shot summary fields and keeping raw JSON secondary in a bounded debug area.
 
-The raw JSON detail is intentionally developer/MVP inspection UI. It exists to verify the canonical saved payload before a final shot-detail screen, navigation, export/share flow, or richer visual presentation is added.
+The selected shot detail is intended to make saved shots useful inside the app. Raw JSON detail is intentionally developer/MVP inspection UI, not the primary user experience. It exists to verify the canonical saved payload while the app grows toward a richer in-app shot detail experience.
 
 ### Test Utilities
 
@@ -149,7 +149,7 @@ Current implementation deliberately excludes:
 
 - BLE scale implementation
 - Half Decent protocol parsing
-- File export and share flows
+- File export and share flows as an MVP priority
 - Import tooling
 
-Those pieces are planned after the core engine and local persistence workflow are stable.
+Export/share can be revisited later if there is an explicit product need, but the current direction is to make saved shots inspectable and useful in the app first.

@@ -32,6 +32,9 @@ fun CaptureScreen(
         )
         Spacer(modifier = Modifier.height(8.dp))
         BasicText(text = uiState.scaleConnectionLabel)
+        uiState.scaleModeLabel?.let { scaleModeLabel ->
+            BasicText(text = scaleModeLabel)
+        }
         Spacer(modifier = Modifier.height(8.dp))
         BasicText(
             text = "Target",

@@ -9,6 +9,7 @@ enum class CaptureStatus {
 data class CaptureUiState(
     val status: CaptureStatus,
     val scaleConnectionLabel: String,
+    val scaleModeLabel: String? = null,
     val shotStatusLabel: String,
     val primaryActionLabel: String,
     val isPrimaryActionEnabled: Boolean,
@@ -23,20 +24,31 @@ data class CaptureUiState(
 )
 
 object CaptureUiStateMapper {
-    fun initialDisconnectedReady(): CaptureUiState =
-        ready(scaleConnectionLabel = "Scale: Not connected")
+    fun initialDisconnectedReady(scaleModeLabel: String? = null): CaptureUiState =
+        ready(
+            scaleConnectionLabel = "Scale: Not connected",
+            scaleModeLabel = scaleModeLabel
+        )
 
-    fun ready(scaleConnectionLabel: String): CaptureUiState = CaptureUiState(
+    fun ready(
+        scaleConnectionLabel: String,
+        scaleModeLabel: String? = null
+    ): CaptureUiState = CaptureUiState(
         status = CaptureStatus.READY,
         scaleConnectionLabel = scaleConnectionLabel,
+        scaleModeLabel = scaleModeLabel,
         shotStatusLabel = "Ready",
         primaryActionLabel = "Start capture",
         isPrimaryActionEnabled = true
     )
 
-    fun recording(scaleConnectionLabel: String = "Scale: Not connected"): CaptureUiState = CaptureUiState(
+    fun recording(
+        scaleConnectionLabel: String = "Scale: Not connected",
+        scaleModeLabel: String? = null
+    ): CaptureUiState = CaptureUiState(
         status = CaptureStatus.RECORDING,
         scaleConnectionLabel = scaleConnectionLabel,
+        scaleModeLabel = scaleModeLabel,
         shotStatusLabel = "Recording",
         primaryActionLabel = "Stop & save",
         isPrimaryActionEnabled = true,
@@ -45,9 +57,13 @@ object CaptureUiStateMapper {
         averageFlowLabel = "Average flow: 0.0 g/s"
     )
 
-    fun savedConfirmation(scaleConnectionLabel: String = "Scale: Not connected"): CaptureUiState = CaptureUiState(
+    fun savedConfirmation(
+        scaleConnectionLabel: String = "Scale: Not connected",
+        scaleModeLabel: String? = null
+    ): CaptureUiState = CaptureUiState(
         status = CaptureStatus.SAVED,
         scaleConnectionLabel = scaleConnectionLabel,
+        scaleModeLabel = scaleModeLabel,
         shotStatusLabel = "Shot saved",
         primaryActionLabel = "Start capture",
         isPrimaryActionEnabled = false

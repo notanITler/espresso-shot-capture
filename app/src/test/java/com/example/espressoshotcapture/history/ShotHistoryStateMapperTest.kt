@@ -66,6 +66,47 @@ class ShotHistoryStateMapperTest {
         )
     }
 
+    @Test
+    fun selectedShotDetailContainsPreparedDisplayFields() {
+        val json = """
+            {
+              "schemaVersion": 1,
+              "shot": {
+                "target": { "targetYieldG": 36.0 },
+                "timing": {
+                  "flowTimeMs": 28000,
+                  "targetReachedAtMs": 24000
+                },
+                "result": {
+                  "actualYieldG": 37.2,
+                  "averageFlowGPerS": 1.28
+                },
+                "samples": []
+              }
+            }
+        """.trimIndent()
+        val entities = listOf(
+            shotEntity(id = "shot-1", createdAtEpochMillis = 1_000L, json = json)
+        )
+
+        assertEquals(
+            ShotHistoryDetail(
+                id = "shot-1",
+                createdAtEpochMillis = 1_000L,
+                json = json,
+                finalYieldLabel = "Yield: 37.2 g",
+                flowTimeLabel = "Flow time: 28 s",
+                targetYieldLabel = "Target: 36.0 g",
+                averageFlowLabel = "Average flow: 1.3 g/s",
+                targetReachedLabel = "Target reached: yes"
+            ),
+            ShotHistoryStateMapper.fromEntities(
+                entities = entities,
+                selectedShotId = "shot-1"
+            ).selectedShotDetail
+        )
+    }
+
     private fun shotEntity(
         id: String,
         createdAtEpochMillis: Long,

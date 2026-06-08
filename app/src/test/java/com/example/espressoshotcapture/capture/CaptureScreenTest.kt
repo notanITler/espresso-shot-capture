@@ -53,6 +53,20 @@ class CaptureScreenTest {
     }
 
     @Test
+    fun demoScaleLabelIsDisplayedWhenProvidedByUiState() {
+        composeTestRule.activity.setContent {
+            CaptureScreen(
+                uiState = CaptureUiStateMapper.initialDisconnectedReady(
+                    scaleModeLabel = "Fake scale simulation"
+                )
+            )
+        }
+
+        composeTestRule.onNodeWithText("Scale: Not connected").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Fake scale simulation").assertIsDisplayed()
+    }
+
+    @Test
     fun primaryActionInvokesCallback() {
         var clicked = false
 
