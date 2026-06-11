@@ -2,6 +2,8 @@ package com.example.espressoshotcapture
 
 import android.content.Context
 import androidx.room.Room
+import com.example.espressoshotcapture.ble.AndroidBleScaleScanner
+import com.example.espressoshotcapture.ble.BleScaleScanner
 import com.example.espressoshotcapture.capture.domain.FakeScaleClient
 import com.example.espressoshotcapture.capture.domain.ScaleClient
 import com.example.espressoshotcapture.persistence.EspressoShotDatabase
@@ -28,5 +30,9 @@ class AppContainer(context: Context) {
 
     val scaleClient: ScaleClient by lazy {
         FakeScaleClient()
+    }
+
+    val bleScaleScanner: BleScaleScanner by lazy {
+        AndroidBleScaleScanner(appContext)
     }
 }
