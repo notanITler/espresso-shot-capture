@@ -31,9 +31,13 @@ fun BleScaleScanRoute(
     val context = LocalContext.current
     val application = context.applicationContext as EspressoShotCaptureApplication
     val viewModel: BleScaleScanViewModel = viewModel(
-        factory = BleScaleScanViewModel.factory(application.appContainer.bleScaleScanner)
+        factory = BleScaleScanViewModel.factory(
+            scanner = application.appContainer.bleScaleScanner,
+            gattClient = application.appContainer.decentScaleGattClient
+        )
     )
     val uiState by viewModel.uiState.collectAsState()
+    val gattState by viewModel.gattState.collectAsState()
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { grantResults ->
@@ -46,10 +50,12 @@ fun BleScaleScanRoute(
 
     BleScaleScanScreen(
         uiState = uiState,
+        gattState = gattState,
         onStartScan = {
             permissionLauncher.launch(AndroidBleScaleScanner.requiredRuntimePermissions())
         },
         onStopScan = viewModel::stopScan,
+        onCandidateSelected = viewModel::connect,
         modifier = modifier
     )
 }
@@ -57,8 +63,10 @@ fun BleScaleScanRoute(
 @Composable
 fun BleScaleScanScreen(
     uiState: BleScaleScanState,
+    gattState: DecentScaleGattState,
     onStartScan: () -> Unit,
     onStopScan: () -> Unit,
+    onCandidateSelected: (BleScaleScanCandidate) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -97,14 +105,37 @@ fun BleScaleScanScreen(
                     .verticalScroll(rememberScrollState())
             ) {
                 uiState.candidates.forEach { candidate ->
-                    BasicText(text = candidate.displayName)
-                    BasicText(text = candidate.displayAddress)
-                    BasicText(text = candidate.matchLabel)
-                    BasicText(text = candidate.rssiLabel)
-                    BasicText(text = candidate.serviceUuidsLabel)
+                    val candidateModifier = if (candidate.isExpectedScale) {
+                        Modifier
+                            .fillMaxWidth()
+                            .clickable { onCandidateSelected(candidate) }
+                    } else {
+                        Modifier.fillMaxWidth()
+                    }
+                    Column(modifier = candidateModifier) {
+                        BasicText(text = candidate.displayName)
+                        BasicText(text = candidate.displayAddress)
+                        BasicText(text = candidate.matchLabel)
+                        BasicText(text = candidate.rssiLabel)
+                        BasicText(text = candidate.serviceUuidsLabel)
+                        if (candidate.isExpectedScale) {
+                            BasicText(text = "Tap to connect")
+                        }
+                    }
                     Spacer(modifier = Modifier.height(8.dp))
                 }
             }
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        BasicText(text = "Decent Scale GATT")
+        BasicText(text = gattState.connectionLabel)
+        BasicText(text = gattState.notifyCharacteristicLabel)
+        BasicText(text = gattState.writeCharacteristicLabel)
+        BasicText(text = gattState.latestRawPacketLabel)
+        BasicText(text = gattState.latestWeightLabel)
+        BasicText(text = gattState.latestTimestampLabel)
+        gattState.latestParserError?.let { parserError ->
+            BasicText(text = "Parser: $parserError")
         }
     }
 }
@@ -122,7 +153,9 @@ private fun BleScaleScanScreenPreview() {
                 )
             )
         ),
+        gattState = DecentScaleGattState(),
         onStartScan = {},
-        onStopScan = {}
+        onStopScan = {},
+        onCandidateSelected = {}
     )
 }

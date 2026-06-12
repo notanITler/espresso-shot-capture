@@ -4,6 +4,10 @@ object HalfDecentScaleMatcher {
     const val EXPECTED_DEVICE_NAME: String = "Decent Scale"
     const val SERVICE_UUID_SHORT: String = "fff0"
     const val SERVICE_UUID_FULL: String = "0000fff0-0000-1000-8000-00805f9b34fb"
+    const val READ_NOTIFY_CHARACTERISTIC_UUID_SHORT: String = "fff4"
+    const val READ_NOTIFY_CHARACTERISTIC_UUID_FULL: String = "0000fff4-0000-1000-8000-00805f9b34fb"
+    const val WRITE_CHARACTERISTIC_UUID_SHORT: String = "36f5"
+    const val WRITE_CHARACTERISTIC_UUID_FULL: String = "000036f5-0000-1000-8000-00805f9b34fb"
 
     fun toCandidate(
         name: String?,
