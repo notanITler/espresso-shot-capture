@@ -21,7 +21,6 @@ class AndroidBleScaleScanner(
         appContext.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
     private val _scanState = MutableStateFlow(BleScaleScanState())
     override val scanState: StateFlow<BleScaleScanState> = _scanState.asStateFlow()
-    private val seenCandidates = linkedMapOf<String, BleScaleScanCandidate>()
     private var isScanning = false
 
     private val scanCallback = object : ScanCallback() {
@@ -68,7 +67,6 @@ class AndroidBleScaleScanner(
 
         if (isScanning) return
 
-        seenCandidates.clear()
         _scanState.value = BleScaleScanState(status = BleScaleScanStatus.SCANNING)
         val settings = ScanSettings.Builder()
             .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
@@ -119,13 +117,15 @@ class AndroidBleScaleScanner(
         val candidate = HalfDecentScaleMatcher.toCandidate(
             name = name,
             address = address,
-            advertisedServiceUuids = serviceUuids
+            advertisedServiceUuids = serviceUuids,
+            rssi = result.rssi
         )
-        val key = address ?: "${candidate.displayName}-${serviceUuids.joinToString()}"
-        seenCandidates[key] = candidate
         _scanState.value = _scanState.value.copy(
             status = BleScaleScanStatus.SCANNING,
-            candidates = seenCandidates.values.sortedByDescending { it.isExpectedScale },
+            candidates = BleScaleScanCandidateList.upsert(
+                existing = _scanState.value.candidates,
+                candidate = candidate
+            ),
             errorMessage = null
         )
     }

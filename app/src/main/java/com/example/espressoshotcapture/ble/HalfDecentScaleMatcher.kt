@@ -8,7 +8,8 @@ object HalfDecentScaleMatcher {
     fun toCandidate(
         name: String?,
         address: String?,
-        advertisedServiceUuids: List<String>
+        advertisedServiceUuids: List<String>,
+        rssi: Int? = null
     ): BleScaleScanCandidate {
         val matchesExpectedName = name?.trim()
             ?.equals(EXPECTED_DEVICE_NAME, ignoreCase = true) == true
@@ -18,6 +19,7 @@ object HalfDecentScaleMatcher {
             name = name,
             address = address,
             advertisedServiceUuids = advertisedServiceUuids,
+            rssi = rssi,
             matchesExpectedName = matchesExpectedName,
             matchesExpectedService = matchesExpectedService
         )

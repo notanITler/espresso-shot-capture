@@ -3,12 +3,15 @@ package com.example.espressoshotcapture.ble
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -87,10 +90,20 @@ fun BleScaleScanScreen(
         if (uiState.candidates.isEmpty()) {
             BasicText(text = "No BLE devices found yet")
         } else {
-            uiState.candidates.forEach { candidate ->
-                BasicText(text = candidate.displayName)
-                BasicText(text = candidate.displayAddress)
-                BasicText(text = candidate.matchLabel)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 220.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                uiState.candidates.forEach { candidate ->
+                    BasicText(text = candidate.displayName)
+                    BasicText(text = candidate.displayAddress)
+                    BasicText(text = candidate.matchLabel)
+                    BasicText(text = candidate.rssiLabel)
+                    BasicText(text = candidate.serviceUuidsLabel)
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
             }
         }
     }
