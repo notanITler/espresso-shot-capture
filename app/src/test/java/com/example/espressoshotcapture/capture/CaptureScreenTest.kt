@@ -1,10 +1,17 @@
 package com.example.espressoshotcapture.capture
 
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import com.example.espressoshotcapture.MainActivity
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -95,14 +102,28 @@ class CaptureScreenTest {
     @Test
     fun recordingValuesAreDisplayedWhileRecording() {
         composeTestRule.activity.setContent {
-            CaptureScreen(uiState = CaptureUiStateMapper.recording())
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                CaptureScreen(uiState = CaptureUiStateMapper.recording())
+            }
         }
 
-        composeTestRule.onNodeWithText("Weight: 0.0 g", substring = true).assertIsDisplayed()
+        composeTestRule
+            .onNodeWithTag(CaptureScreenTestTags.RECORDING_WEIGHT)
+            .performScrollTo()
+            .assertIsDisplayed()
+            .assertTextContains("Weight: 0.0 g")
         composeTestRule.onNodeWithText("Progress: 0.0 / 36.0 g").assertIsDisplayed()
         composeTestRule.onNodeWithText("Target not reached").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Flow time: 0 s", substring = true).assertIsDisplayed()
-        composeTestRule.onNodeWithText("Average flow: 0.0 g/s", substring = true).assertIsDisplayed()
+        composeTestRule
+            .onNodeWithTag(CaptureScreenTestTags.RECORDING_FLOW_TIME)
+            .performScrollTo()
+            .assertIsDisplayed()
+            .assertTextContains("Flow time: 0 s")
+        composeTestRule
+            .onNodeWithTag(CaptureScreenTestTags.RECORDING_AVERAGE_FLOW)
+            .performScrollTo()
+            .assertIsDisplayed()
+            .assertTextContains("Average flow: 0.0 g/s")
     }
 
     @Test

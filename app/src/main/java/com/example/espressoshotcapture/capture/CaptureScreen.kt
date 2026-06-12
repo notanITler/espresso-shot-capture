@@ -1,19 +1,18 @@
 package com.example.espressoshotcapture.capture
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
+import com.example.espressoshotcapture.ui.SectionContainer
 
 @Composable
 fun CaptureScreen(
@@ -21,10 +20,9 @@ fun CaptureScreen(
     onPrimaryAction: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    Column(
+    SectionContainer(
+        title = "Capture",
         modifier = modifier
-            .fillMaxWidth()
-            .padding(16.dp)
     ) {
         BasicText(
             text = "Espresso Shot Capture",
@@ -59,19 +57,32 @@ fun CaptureScreen(
                 Modifier
             }
         )
-        recordingValuesText(uiState)?.let { valuesText ->
-            BasicText(text = valuesText)
+        uiState.currentWeightLabel?.let { currentWeightLabel ->
+            BasicText(
+                text = currentWeightLabel,
+                modifier = Modifier.testTag(CaptureScreenTestTags.RECORDING_WEIGHT)
+            )
+        }
+        uiState.flowTimeLabel?.let { flowTimeLabel ->
+            BasicText(
+                text = flowTimeLabel,
+                modifier = Modifier.testTag(CaptureScreenTestTags.RECORDING_FLOW_TIME)
+            )
+        }
+        uiState.averageFlowLabel?.let { averageFlowLabel ->
+            BasicText(
+                text = averageFlowLabel,
+                modifier = Modifier.testTag(CaptureScreenTestTags.RECORDING_AVERAGE_FLOW)
+            )
         }
     }
 }
 
-private fun recordingValuesText(uiState: CaptureUiState): String? =
-    listOfNotNull(
-        uiState.currentWeightLabel,
-        uiState.flowTimeLabel,
-        uiState.averageFlowLabel
-    ).takeIf { labels -> labels.isNotEmpty() }
-        ?.joinToString(separator = "  |  ")
+object CaptureScreenTestTags {
+    const val RECORDING_WEIGHT = "recording-weight"
+    const val RECORDING_FLOW_TIME = "recording-flow-time"
+    const val RECORDING_AVERAGE_FLOW = "recording-average-flow"
+}
 
 @Preview
 @Composable

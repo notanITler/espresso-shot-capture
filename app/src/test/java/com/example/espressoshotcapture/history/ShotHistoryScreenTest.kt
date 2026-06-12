@@ -4,10 +4,14 @@ import androidx.activity.compose.setContent
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToNode
 import com.example.espressoshotcapture.MainActivity
 import org.junit.Rule
 import org.junit.Test
@@ -79,6 +83,9 @@ class ShotHistoryScreenTest {
         )
 
         composeTestRule.onNodeWithText("shot-6").assertIsDisplayed()
+        composeTestRule
+            .onNodeWithTag(ShotHistoryScreenTestTags.HISTORY_LIST)
+            .performScrollToNode(hasText("shot-2"))
         composeTestRule.onNodeWithText("shot-2").assertIsDisplayed()
         composeTestRule.onAllNodesWithText("shot-1").assertCountEquals(0)
     }
@@ -121,8 +128,9 @@ class ShotHistoryScreenTest {
         composeTestRule.onNodeWithText("Average flow: 1.3 g/s").assertIsDisplayed()
         composeTestRule.onNodeWithText("Target: 36.0 g").assertIsDisplayed()
         composeTestRule.onNodeWithText("Target reached: yes").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Raw JSON / debug detail").assertIsDisplayed()
-        composeTestRule.onNodeWithText(json).assertIsDisplayed()
+        composeTestRule.onAllNodesWithText("Raw JSON / debug detail").assertCountEquals(1)
+        composeTestRule.onAllNodesWithTag(ShotHistoryScreenTestTags.RAW_JSON).assertCountEquals(1)
+        composeTestRule.onAllNodesWithText(json).assertCountEquals(1)
     }
 
     private fun setHistoryContent(items: List<ShotHistoryItem>) {

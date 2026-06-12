@@ -4,7 +4,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -19,13 +18,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.espressoshotcapture.EspressoShotCaptureApplication
+import com.example.espressoshotcapture.ui.SectionContainer
 
 private const val MAX_VISIBLE_HISTORY_ROWS = 5
 
@@ -80,34 +80,47 @@ fun ShotHistoryScreen(
     onShotSelected: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    Column(modifier = modifier.fillMaxSize()) {
-        BasicText(
-            text = "Recent Shot History",
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-            style = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-        )
-        if (items.isEmpty()) {
-            BasicText(
-                text = "No saved shots",
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-            )
-        } else {
-            val visibleItems = items.take(MAX_VISIBLE_HISTORY_ROWS)
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-            ) {
-                items(items = visibleItems, key = { item -> item.id }) { item ->
-                    ShotHistoryRow(
-                        item = item,
-                        onClick = { onShotSelected(item.id) }
-                    )
+    Column(modifier = modifier.fillMaxWidth()) {
+        SectionContainer(title = "Recent Shot History") {
+            if (items.isEmpty()) {
+                BasicText(
+                    text = "No saved shots",
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+            } else {
+                val visibleItems = items.take(MAX_VISIBLE_HISTORY_ROWS)
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 280.dp)
+                        .testTag(ShotHistoryScreenTestTags.HISTORY_LIST)
+                ) {
+                    items(items = visibleItems, key = { item -> item.id }) { item ->
+                        ShotHistoryRow(
+                            item = item,
+                            onClick = { onShotSelected(item.id) }
+                        )
+                    }
                 }
             }
-            selectedShotDetail?.let { detail ->
-                ShotHistoryDetailView(detail = detail)
-            }
+        }
+        ShotHistoryDetailSection(detail = selectedShotDetail)
+    }
+}
+
+@Composable
+private fun ShotHistoryDetailSection(detail: ShotHistoryDetail?) {
+    SectionContainer(title = "Selected Shot Detail") {
+        if (detail == null) {
+            BasicText(
+                text = "Select a saved shot to inspect it",
+                modifier = Modifier.padding(top = 8.dp)
+            )
+        } else {
+            ShotHistoryDetailView(
+                detail = detail,
+                modifier = Modifier.testTag(ShotHistoryScreenTestTags.SELECTED_DETAIL)
+            )
         }
     }
 }
@@ -131,16 +144,15 @@ private fun ShotHistoryRow(
 }
 
 @Composable
-private fun ShotHistoryDetailView(detail: ShotHistoryDetail) {
+private fun ShotHistoryDetailView(
+    detail: ShotHistoryDetail,
+    modifier: Modifier = Modifier
+) {
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .padding(16.dp)
+            .padding(top = 8.dp)
     ) {
-        BasicText(
-            text = "Selected Shot Detail",
-            style = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-        )
         BasicText(text = "id: ${detail.id}")
         BasicText(text = "createdAtEpochMillis: ${detail.createdAtEpochMillis}")
         BasicText(text = detail.finalYieldLabel)
@@ -160,11 +172,18 @@ private fun ShotHistoryDetailView(detail: ShotHistoryDetail) {
                 .padding(top = 8.dp)
                 .border(width = 1.dp, color = Color.LightGray)
                 .verticalScroll(rememberScrollState())
+                .testTag(ShotHistoryScreenTestTags.RAW_JSON)
                 .padding(8.dp)
         ) {
             BasicText(text = detail.json)
         }
     }
+}
+
+object ShotHistoryScreenTestTags {
+    const val HISTORY_LIST = "history-list"
+    const val SELECTED_DETAIL = "selected-shot-detail"
+    const val RAW_JSON = "raw-json"
 }
 
 @Preview
