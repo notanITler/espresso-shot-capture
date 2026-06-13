@@ -4,8 +4,10 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import kotlinx.coroutines.withTimeoutOrNull
 
 class FakeScaleClientTest {
     @Test
@@ -98,6 +100,34 @@ class FakeScaleClientTest {
         client.emitNextReading()
 
         client.resetReadings()
+        client.emitNextReading()
+
+        assertEquals(
+            ScaleReading(timestampMillis = 0L, weightGrams = 0.0),
+            client.readings.first()
+        )
+    }
+
+    @Test
+    fun resetReadingsClearsStaleReplayedReading() = runTest {
+        val client = FakeScaleClient(
+            readingSequence = listOf(
+                ScaleReading(timestampMillis = 0L, weightGrams = 0.0),
+                ScaleReading(timestampMillis = 1_000L, weightGrams = 2.0)
+            )
+        )
+        client.connect()
+        client.emitNextReading()
+
+        assertEquals(
+            ScaleReading(timestampMillis = 0L, weightGrams = 0.0),
+            client.readings.first()
+        )
+
+        client.resetReadings()
+
+        assertNull(withTimeoutOrNull(1L) { client.readings.first() })
+
         client.emitNextReading()
 
         assertEquals(

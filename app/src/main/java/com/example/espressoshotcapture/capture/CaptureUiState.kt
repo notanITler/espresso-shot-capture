@@ -19,7 +19,7 @@ data class CaptureUiState(
     val progressLabel: String = MvpShotTarget.EMPTY_PROGRESS_LABEL,
     val targetReachedLabel: String = MvpShotTarget.TARGET_NOT_REACHED_LABEL,
     val currentWeightLabel: String? = null,
-    val flowTimeLabel: String? = null,
+    val captureElapsedLabel: String? = null,
     val averageFlowLabel: String? = null
 )
 
@@ -53,7 +53,7 @@ object CaptureUiStateMapper {
         primaryActionLabel = "Stop & save",
         isPrimaryActionEnabled = true,
         currentWeightLabel = "Weight: 0.0 g",
-        flowTimeLabel = "Flow time: 0 s",
+        captureElapsedLabel = "Capture elapsed: 0 s",
         averageFlowLabel = "Average flow: 0.0 g/s"
     )
 

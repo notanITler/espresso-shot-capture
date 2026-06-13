@@ -138,22 +138,22 @@ class CaptureViewModel(
         val recordingStartMs = recordingStartTimestampMs ?: sample.timestampMs.also {
             recordingStartTimestampMs = it
         }
-        val flowTimeMs = (sample.timestampMs - recordingStartMs).coerceAtLeast(0L)
+        val captureElapsedMs = (sample.timestampMs - recordingStartMs).coerceAtLeast(0L)
 
         _uiState.value = _uiState.value.copy(
             currentWeightLabel = "Weight: ${sample.weightG.toOneDecimal()} g",
             progressLabel = MvpShotTarget.progressLabel(sample.weightG),
             targetReachedLabel = MvpShotTarget.targetReachedLabel(sample.weightG),
-            flowTimeLabel = "Flow time: ${flowTimeMs / 1_000L} s",
-            averageFlowLabel = "Average flow: ${sample.averageFlowGPerS(flowTimeMs).toOneDecimal()} g/s"
+            captureElapsedLabel = "Capture elapsed: ${captureElapsedMs / 1_000L} s",
+            averageFlowLabel = "Average flow: ${sample.averageFlowGPerS(captureElapsedMs).toOneDecimal()} g/s"
         )
     }
 
-    private fun WeightSample.averageFlowGPerS(flowTimeMs: Long): Double =
-        if (flowTimeMs <= 0L) {
+    private fun WeightSample.averageFlowGPerS(captureElapsedMs: Long): Double =
+        if (captureElapsedMs <= 0L) {
             0.0
         } else {
-            weightG / (flowTimeMs / 1_000.0)
+            weightG / (captureElapsedMs / 1_000.0)
         }
 
     private fun Double.toOneDecimal(): String =

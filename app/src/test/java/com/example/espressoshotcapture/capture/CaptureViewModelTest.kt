@@ -4,6 +4,7 @@ import com.example.espressoshotcapture.capture.domain.FakeScaleClient
 import com.example.espressoshotcapture.capture.domain.ScaleClient
 import com.example.espressoshotcapture.capture.domain.ScaleConnectionState
 import com.example.espressoshotcapture.capture.domain.ScaleReading
+import com.example.espressoshotcapture.history.ShotHistoryMapper
 import com.example.espressoshotcapture.persistence.ShotDao
 import com.example.espressoshotcapture.persistence.ShotEntity
 import com.example.espressoshotcapture.repository.ShotRepository
@@ -140,7 +141,7 @@ class CaptureViewModelTest {
         assertEquals("Weight: 10.0 g", viewModel.uiState.value.currentWeightLabel)
         assertEquals("Progress: 10.0 / 36.0 g", viewModel.uiState.value.progressLabel)
         assertEquals("Target not reached", viewModel.uiState.value.targetReachedLabel)
-        assertEquals("Flow time: 0 s", viewModel.uiState.value.flowTimeLabel)
+        assertEquals("Capture elapsed: 0 s", viewModel.uiState.value.captureElapsedLabel)
         assertEquals("Average flow: 0.0 g/s", viewModel.uiState.value.averageFlowLabel)
 
         scaleClient.emitReading(
@@ -151,7 +152,7 @@ class CaptureViewModelTest {
         assertEquals("Weight: 20.0 g", viewModel.uiState.value.currentWeightLabel)
         assertEquals("Progress: 20.0 / 36.0 g", viewModel.uiState.value.progressLabel)
         assertEquals("Target not reached", viewModel.uiState.value.targetReachedLabel)
-        assertEquals("Flow time: 2 s", viewModel.uiState.value.flowTimeLabel)
+        assertEquals("Capture elapsed: 2 s", viewModel.uiState.value.captureElapsedLabel)
         assertEquals("Average flow: 10.0 g/s", viewModel.uiState.value.averageFlowLabel)
     }
 
@@ -226,7 +227,7 @@ class CaptureViewModelTest {
         assertEquals("Weight: 0.0 g", viewModel.uiState.value.currentWeightLabel)
         assertEquals("Progress: 0.0 / 36.0 g", viewModel.uiState.value.progressLabel)
         assertEquals("Target not reached", viewModel.uiState.value.targetReachedLabel)
-        assertEquals("Flow time: 0 s", viewModel.uiState.value.flowTimeLabel)
+        assertEquals("Capture elapsed: 0 s", viewModel.uiState.value.captureElapsedLabel)
         assertEquals("Average flow: 0.0 g/s", viewModel.uiState.value.averageFlowLabel)
 
         advanceTimeBy(500L)
@@ -235,7 +236,7 @@ class CaptureViewModelTest {
         assertEquals("Weight: 2.0 g", viewModel.uiState.value.currentWeightLabel)
         assertEquals("Progress: 2.0 / 36.0 g", viewModel.uiState.value.progressLabel)
         assertEquals("Target not reached", viewModel.uiState.value.targetReachedLabel)
-        assertEquals("Flow time: 1 s", viewModel.uiState.value.flowTimeLabel)
+        assertEquals("Capture elapsed: 1 s", viewModel.uiState.value.captureElapsedLabel)
         assertEquals("Average flow: 2.0 g/s", viewModel.uiState.value.averageFlowLabel)
 
         advanceTimeBy(500L)
@@ -244,7 +245,7 @@ class CaptureViewModelTest {
         assertEquals("Weight: 5.0 g", viewModel.uiState.value.currentWeightLabel)
         assertEquals("Progress: 5.0 / 36.0 g", viewModel.uiState.value.progressLabel)
         assertEquals("Target not reached", viewModel.uiState.value.targetReachedLabel)
-        assertEquals("Flow time: 2 s", viewModel.uiState.value.flowTimeLabel)
+        assertEquals("Capture elapsed: 2 s", viewModel.uiState.value.captureElapsedLabel)
         assertEquals("Average flow: 2.5 g/s", viewModel.uiState.value.averageFlowLabel)
 
         viewModel.onPrimaryAction()
@@ -283,14 +284,14 @@ class CaptureViewModelTest {
         runCurrent()
 
         assertEquals("Weight: 2.0 g", viewModel.uiState.value.currentWeightLabel)
-        assertEquals("Flow time: 1 s", viewModel.uiState.value.flowTimeLabel)
+        assertEquals("Capture elapsed: 1 s", viewModel.uiState.value.captureElapsedLabel)
 
         viewModel.onPrimaryAction()
         runCurrent()
 
         assertEquals(CaptureStatus.SAVED, viewModel.uiState.value.status)
         assertEquals(null, viewModel.uiState.value.currentWeightLabel)
-        assertEquals(null, viewModel.uiState.value.flowTimeLabel)
+        assertEquals(null, viewModel.uiState.value.captureElapsedLabel)
         assertEquals(null, viewModel.uiState.value.averageFlowLabel)
 
         advanceTimeBy(2_000L)
@@ -298,7 +299,7 @@ class CaptureViewModelTest {
 
         assertEquals(CaptureStatus.READY, viewModel.uiState.value.status)
         assertEquals(null, viewModel.uiState.value.currentWeightLabel)
-        assertEquals(null, viewModel.uiState.value.flowTimeLabel)
+        assertEquals(null, viewModel.uiState.value.captureElapsedLabel)
         assertEquals(null, viewModel.uiState.value.averageFlowLabel)
     }
 
@@ -312,7 +313,7 @@ class CaptureViewModelTest {
         runCurrent()
 
         assertEquals(null, viewModel.uiState.value.currentWeightLabel)
-        assertEquals(null, viewModel.uiState.value.flowTimeLabel)
+        assertEquals(null, viewModel.uiState.value.captureElapsedLabel)
         assertEquals(null, viewModel.uiState.value.averageFlowLabel)
     }
 
@@ -329,6 +330,90 @@ class CaptureViewModelTest {
         assertTrue(savedShot.json.contains(""""schemaVersion":1"""))
         assertTrue(savedShot.json.contains(""""id":"shot-123456""""))
         assertTrue(savedShot.json.contains(""""status":"MANUAL_STOPPED""""))
+    }
+
+    @Test
+    fun stopAndSaveBeforeStartPolicyStillSavesReadingValues() = runTest(testDispatcher) {
+        runCurrent()
+        viewModel.onPrimaryAction()
+        runCurrent()
+
+        scaleClient.emitReading(ScaleReading(timestampMillis = 0L, weightGrams = 0.0))
+        runCurrent()
+        scaleClient.emitReading(ScaleReading(timestampMillis = 1_000L, weightGrams = 0.8))
+        runCurrent()
+
+        viewModel.onPrimaryAction()
+        runCurrent()
+
+        val savedShot = dao.getAllShotsOnce().single()
+        assertTrue(savedShot.json.contains(""""id":"shot-123456""""))
+        assertTrue(savedShot.json.contains(""""actualYieldG":0.8"""))
+        assertTrue(savedShot.json.contains(""""flowTimeMs":1000"""))
+        assertTrue(savedShot.json.contains(""""sampleCount":2"""))
+        assertTrue(savedShot.json.contains(""""weightGRaw":0.8"""))
+
+        val historyItem = ShotHistoryMapper.fromEntity(savedShot)
+        assertEquals("Yield: 0.8 g", historyItem.finalYieldLabel)
+        assertEquals("Flow time: 1 s", historyItem.flowTimeLabel)
+        assertEquals("Target: 36.0 g", historyItem.targetYieldLabel)
+    }
+
+    @Test
+    fun liveCaptureElapsedIsSeparateFromSavedFlowTime() = runTest(testDispatcher) {
+        runCurrent()
+        viewModel.onPrimaryAction()
+        runCurrent()
+
+        listOf(
+            ScaleReading(timestampMillis = 0L, weightGrams = 0.0),
+            ScaleReading(timestampMillis = 1_000L, weightGrams = 1.0),
+            ScaleReading(timestampMillis = 2_000L, weightGrams = 2.0),
+            ScaleReading(timestampMillis = 3_000L, weightGrams = 3.5),
+            ScaleReading(timestampMillis = 4_000L, weightGrams = 5.0)
+        ).forEach { reading ->
+            scaleClient.emitReading(reading)
+            runCurrent()
+        }
+
+        assertEquals("Capture elapsed: 4 s", viewModel.uiState.value.captureElapsedLabel)
+
+        viewModel.onPrimaryAction()
+        runCurrent()
+
+        val savedShot = dao.getAllShotsOnce().single()
+        assertTrue(savedShot.json.contains(""""flowTimeMs":2000"""))
+        assertEquals("Flow time: 2 s", ShotHistoryMapper.fromEntity(savedShot).flowTimeLabel)
+    }
+
+    @Test
+    fun consecutiveFakeCaptureSessionsSaveNonZeroFlowTime() = runTest(testDispatcher) {
+        val fakeScaleClient = FakeScaleClient(
+            readingSequence = listOf(
+                ScaleReading(timestampMillis = 0L, weightGrams = 0.0),
+                ScaleReading(timestampMillis = 1_000L, weightGrams = 0.8)
+            )
+        )
+        viewModel = CaptureViewModel(
+            shotRepository = ShotRepository(dao),
+            scaleClient = fakeScaleClient,
+            saveDispatcher = testDispatcher,
+            currentTimeMillis = { 123_456L },
+            savedConfirmationDelayMs = 1_000L
+        )
+        runCurrent()
+
+        saveShortFakeRecordingSession()
+        saveShortFakeRecordingSession()
+
+        val savedShots = dao.getAllShotsOnce()
+        assertEquals(2, savedShots.size)
+        savedShots.forEach { savedShot ->
+            assertTrue(savedShot.json.contains(""""flowTimeMs":1000"""))
+            assertTrue(savedShot.json.contains(""""actualYieldG":0.8"""))
+            assertTrue(savedShot.json.contains(""""sampleCount":2"""))
+            assertEquals("Flow time: 1 s", ShotHistoryMapper.fromEntity(savedShot).flowTimeLabel)
+        }
     }
 
     @Test
@@ -385,6 +470,20 @@ class CaptureViewModelTest {
         }
 
         viewModel.onPrimaryAction()
+        runCurrent()
+    }
+
+    private fun TestScope.saveShortFakeRecordingSession() {
+        viewModel.onPrimaryAction()
+        runCurrent()
+
+        advanceTimeBy(500L)
+        runCurrent()
+
+        viewModel.onPrimaryAction()
+        runCurrent()
+
+        advanceTimeBy(1_000L)
         runCurrent()
     }
 }

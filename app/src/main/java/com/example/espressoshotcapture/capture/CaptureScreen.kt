@@ -63,10 +63,10 @@ fun CaptureScreen(
                 modifier = Modifier.testTag(CaptureScreenTestTags.RECORDING_WEIGHT)
             )
         }
-        uiState.flowTimeLabel?.let { flowTimeLabel ->
+        uiState.captureElapsedLabel?.let { captureElapsedLabel ->
             BasicText(
-                text = flowTimeLabel,
-                modifier = Modifier.testTag(CaptureScreenTestTags.RECORDING_FLOW_TIME)
+                text = captureElapsedLabel,
+                modifier = Modifier.testTag(CaptureScreenTestTags.RECORDING_CAPTURE_ELAPSED)
             )
         }
         uiState.averageFlowLabel?.let { averageFlowLabel ->
@@ -80,7 +80,7 @@ fun CaptureScreen(
 
 object CaptureScreenTestTags {
     const val RECORDING_WEIGHT = "recording-weight"
-    const val RECORDING_FLOW_TIME = "recording-flow-time"
+    const val RECORDING_CAPTURE_ELAPSED = "recording-capture-elapsed"
     const val RECORDING_AVERAGE_FLOW = "recording-average-flow"
 }
 

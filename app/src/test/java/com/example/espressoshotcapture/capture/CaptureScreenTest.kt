@@ -115,10 +115,10 @@ class CaptureScreenTest {
         composeTestRule.onNodeWithText("Progress: 0.0 / 36.0 g").assertIsDisplayed()
         composeTestRule.onNodeWithText("Target not reached").assertIsDisplayed()
         composeTestRule
-            .onNodeWithTag(CaptureScreenTestTags.RECORDING_FLOW_TIME)
+            .onNodeWithTag(CaptureScreenTestTags.RECORDING_CAPTURE_ELAPSED)
             .performScrollTo()
             .assertIsDisplayed()
-            .assertTextContains("Flow time: 0 s")
+            .assertTextContains("Capture elapsed: 0 s")
         composeTestRule
             .onNodeWithTag(CaptureScreenTestTags.RECORDING_AVERAGE_FLOW)
             .performScrollTo()

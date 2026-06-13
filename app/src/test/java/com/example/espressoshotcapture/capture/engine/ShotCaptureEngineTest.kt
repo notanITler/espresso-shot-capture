@@ -426,6 +426,48 @@ class ShotCaptureEngineTest {
         assertEquals(0, draft.result.sampleCount)
     }
 
+    @Test
+    fun manualStopCapturesArmedSamplesWhenRecordingHasNotStarted() {
+        val engine = armedEngine()
+        engine.addSamples(0.0, 0.8)
+
+        val draft = engine.stopManually(fallbackCreatedAtEpochMs = 123456)
+            ?: error("Expected manual shot draft")
+
+        assertEquals(ShotCaptureState.SAVED, engine.state)
+        assertEquals("shot-0", draft.id)
+        assertEquals(0L, draft.createdAtEpochMs)
+        assertEquals(ShotStatus.MANUAL_STOPPED, draft.status)
+        assertEquals(StopMode.MANUAL, draft.timing.stopMode)
+        assertEquals(2, draft.result.sampleCount)
+        assertEquals(0.8, draft.result.actualYieldG ?: error("Expected actual yield"), 0.0)
+        assertEquals(1000L, draft.timing.flowTimeMs)
+        assertEquals(
+            listOf(0.0, 0.8),
+            draft.samples.map { sample -> sample.weightGRaw }
+        )
+    }
+
+    @Test
+    fun manualStopCapturesStartTriggerSamplesWhenRecordingJustStarted() {
+        val engine = armedEngine()
+        engine.addSamples(0.0, 0.8, 2.0)
+
+        assertEquals(ShotCaptureState.RECORDING, engine.state)
+        assertTrue(engine.recordedSamples.isEmpty())
+
+        val draft = engine.stopManually(fallbackCreatedAtEpochMs = 123456)
+            ?: error("Expected manual shot draft")
+
+        assertEquals(3, draft.result.sampleCount)
+        assertEquals(2.0, draft.result.actualYieldG ?: error("Expected actual yield"), 0.0)
+        assertEquals(2000L, draft.timing.flowTimeMs)
+        assertEquals(
+            listOf(0.0, 0.8, 2.0),
+            draft.samples.map { sample -> sample.weightGRaw }
+        )
+    }
+
     private fun connectedIdleEngine(config: ShotCaptureConfig = ShotCaptureConfig()): ShotCaptureEngine =
         ShotCaptureEngine(config = config).also { engine ->
             engine.onScaleConnected()

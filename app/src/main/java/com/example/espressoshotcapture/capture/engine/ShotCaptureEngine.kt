@@ -115,6 +115,7 @@ class ShotCaptureEngine(
             return null
         }
 
+        captureArmedSamplesIfNeeded()
         completedShotDraft = createShotDraft(
             target = target,
             createdAtEpochMs = recordingStartedAtMs ?: fallbackCreatedAtEpochMs,
@@ -183,6 +184,15 @@ class ShotCaptureEngine(
                 state = ShotCaptureState.SAVED
             }
         }
+    }
+
+    private fun captureArmedSamplesIfNeeded() {
+        if (capturedSamples.isNotEmpty() || armedSamples.isEmpty()) {
+            return
+        }
+
+        recordingStartedAtMs = armedSamples.first().timestampMs
+        armedSamples.forEach(::recordSample)
     }
 
     private fun createShotDraft(

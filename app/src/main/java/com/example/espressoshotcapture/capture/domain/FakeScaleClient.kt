@@ -1,6 +1,7 @@
 package com.example.espressoshotcapture.capture.domain
 
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -35,8 +36,10 @@ class FakeScaleClient(
         _connectionState.value = ScaleConnectionState.Disconnected
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     fun resetReadings() {
         nextReadingIndex = 0
+        _readings.resetReplayCache()
     }
 
     fun emitNextReading(): Boolean {
