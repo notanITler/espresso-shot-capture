@@ -4,7 +4,9 @@ import android.content.Context
 import androidx.room.Room
 import com.example.espressoshotcapture.ble.AndroidDecentScaleGattClient
 import com.example.espressoshotcapture.ble.AndroidBleScaleScanner
+import com.example.espressoshotcapture.ble.BleScaleScanCandidate
 import com.example.espressoshotcapture.ble.BleScaleScanner
+import com.example.espressoshotcapture.ble.DecentScaleClient
 import com.example.espressoshotcapture.ble.DecentScaleGattClient
 import com.example.espressoshotcapture.capture.domain.FakeScaleClient
 import com.example.espressoshotcapture.capture.domain.ScaleClient
@@ -41,4 +43,10 @@ class AppContainer(context: Context) {
     val decentScaleGattClient: DecentScaleGattClient by lazy {
         AndroidDecentScaleGattClient(appContext)
     }
+
+    fun createDecentScaleClient(candidate: BleScaleScanCandidate): ScaleClient =
+        DecentScaleClient(
+            gattClient = decentScaleGattClient,
+            candidate = candidate
+        )
 }
