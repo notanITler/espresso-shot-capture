@@ -1,7 +1,6 @@
 package com.example.espressoshotcapture.capture
 
 import com.example.espressoshotcapture.capture.domain.CaptureTarget
-import com.example.espressoshotcapture.capture.domain.ShotSource
 import kotlin.math.roundToInt
 
 object MvpShotTarget {
@@ -26,16 +25,15 @@ object MvpShotTarget {
             TARGET_NOT_REACHED_LABEL
         }
 
-    fun toCaptureTarget(): CaptureTarget =
-        CaptureTarget(
-            source = ShotSource.QUICK_SHOT,
-            recipeId = null,
-            beanId = null,
-            doseG = DOSE_G,
-            targetRatio = TARGET_RATIO,
-            targetYieldG = TARGET_YIELD_G,
-            targetTimeS = null
+    fun defaultState(): CaptureTargetState =
+        CaptureTargetState(
+            doseGrams = DOSE_G,
+            targetYieldGrams = TARGET_YIELD_G
         )
+
+    fun toCaptureTarget(): CaptureTarget =
+        defaultState().toCaptureTargetOrNull()
+            ?: error("Default MVP shot target must be valid")
 
     private fun Double.toOneDecimal(): String =
         ((this * 10.0).roundToInt() / 10.0).toString()

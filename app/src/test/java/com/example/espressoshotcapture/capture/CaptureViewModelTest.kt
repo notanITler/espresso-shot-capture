@@ -22,6 +22,8 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -61,6 +63,45 @@ class CaptureViewModelTest {
             CaptureUiStateMapper.initialDisconnectedReady(),
             viewModel.uiState.value
         )
+    }
+
+    @Test
+    fun defaultTargetStateUsesMvpValues() = runTest(testDispatcher) {
+        val targetState = viewModel.targetState.value
+
+        assertEquals(18.0, targetState.doseGrams, 0.0)
+        assertEquals(36.0, targetState.targetYieldGrams, 0.0)
+        assertEquals(2.0, targetState.ratio ?: error("Expected ratio"), 0.0)
+        assertTrue(targetState.isValid)
+    }
+
+    @Test
+    fun targetStateCalculatesRatioFromUpdatedValues() = runTest(testDispatcher) {
+        viewModel.updateTarget(doseGrams = 20.0, targetYieldGrams = 50.0)
+
+        val targetState = viewModel.targetState.value
+        assertEquals(20.0, targetState.doseGrams, 0.0)
+        assertEquals(50.0, targetState.targetYieldGrams, 0.0)
+        assertEquals(2.5, targetState.ratio ?: error("Expected ratio"), 0.0)
+        assertTrue(targetState.isValid)
+    }
+
+    @Test
+    fun invalidDoseMakesTargetStateInvalid() = runTest(testDispatcher) {
+        viewModel.updateTarget(doseGrams = 0.0, targetYieldGrams = 36.0)
+
+        val targetState = viewModel.targetState.value
+        assertFalse(targetState.isValid)
+        assertNull(targetState.ratio)
+    }
+
+    @Test
+    fun invalidTargetYieldMakesTargetStateInvalid() = runTest(testDispatcher) {
+        viewModel.updateTarget(doseGrams = 18.0, targetYieldGrams = 0.0)
+
+        val targetState = viewModel.targetState.value
+        assertFalse(targetState.isValid)
+        assertNull(targetState.ratio)
     }
 
     @Test
@@ -330,6 +371,21 @@ class CaptureViewModelTest {
         assertTrue(savedShot.json.contains(""""schemaVersion":1"""))
         assertTrue(savedShot.json.contains(""""id":"shot-123456""""))
         assertTrue(savedShot.json.contains(""""status":"MANUAL_STOPPED""""))
+    }
+
+    @Test
+    fun fakeCaptureSavePathUsesActiveTargetValues() = runTest(testDispatcher) {
+        viewModel.updateTarget(doseGrams = 19.0, targetYieldGrams = 38.0)
+        runCurrent()
+
+        viewModel.onPrimaryAction()
+        viewModel.onPrimaryAction()
+        runCurrent()
+
+        val savedShot = dao.getAllShotsOnce().single()
+        assertTrue(savedShot.json.contains(""""doseG":19.0"""))
+        assertTrue(savedShot.json.contains(""""targetRatio":2.0"""))
+        assertTrue(savedShot.json.contains(""""targetYieldG":38.0"""))
     }
 
     @Test

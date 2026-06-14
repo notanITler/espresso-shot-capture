@@ -11,6 +11,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.espressoshotcapture.EspressoShotCaptureApplication
 import com.example.espressoshotcapture.capture.domain.FakeScaleClient
+import com.example.espressoshotcapture.capture.domain.CaptureTarget
 import com.example.espressoshotcapture.capture.domain.ScaleClient
 import com.example.espressoshotcapture.capture.domain.ScaleConnectionState
 import com.example.espressoshotcapture.capture.domain.ScaleReading
@@ -45,13 +46,18 @@ class CaptureViewModel(
         CaptureUiStateMapper.initialDisconnectedReady(scaleModeLabel = scaleModeLabel)
     )
     val uiState: StateFlow<CaptureUiState> = _uiState.asStateFlow()
+    private val _targetState = MutableStateFlow(MvpShotTarget.defaultState())
+    val targetState: StateFlow<CaptureTargetState> = _targetState.asStateFlow()
     private var recordingReadingsJob: Job? = null
     private var fakeReadingEmissionJob: Job? = null
     private var recordingStartTimestampMs: Long? = null
     private var captureSessionStartedAtEpochMs: Long? = null
     private var firstScaleReadingTimestampMs: Long? = null
     private var lastCaptureSessionStartedAtEpochMs: Long? = null
-    private var shotCaptureEngine: ShotCaptureEngine = createArmedShotCaptureEngine()
+    private var activeCaptureTarget: CaptureTarget = requireNotNull(
+        _targetState.value.toCaptureTargetOrNull()
+    )
+    private var shotCaptureEngine: ShotCaptureEngine = createArmedShotCaptureEngine(activeCaptureTarget)
 
     init {
         viewModelScope.launch {
@@ -70,11 +76,20 @@ class CaptureViewModel(
         }
     }
 
+    fun updateTarget(doseGrams: Double, targetYieldGrams: Double) {
+        _targetState.value = CaptureTargetState(
+            doseGrams = doseGrams,
+            targetYieldGrams = targetYieldGrams
+        )
+    }
+
     private fun startRecording() {
+        val captureTarget = _targetState.value.toCaptureTargetOrNull() ?: return
+        activeCaptureTarget = captureTarget
         recordingStartTimestampMs = null
         firstScaleReadingTimestampMs = null
         captureSessionStartedAtEpochMs = nextCaptureSessionStartedAtMs()
-        shotCaptureEngine = createArmedShotCaptureEngine()
+        shotCaptureEngine = createArmedShotCaptureEngine(activeCaptureTarget)
         _uiState.value = CaptureUiStateMapper.recording(
             scaleConnectionLabel = _uiState.value.scaleConnectionLabel,
             scaleModeLabel = _uiState.value.scaleModeLabel
@@ -142,8 +157,8 @@ class CaptureViewModel(
 
         _uiState.value = _uiState.value.copy(
             currentWeightLabel = "Weight: ${sample.weightG.toOneDecimal()} g",
-            progressLabel = MvpShotTarget.progressLabel(sample.weightG),
-            targetReachedLabel = MvpShotTarget.targetReachedLabel(sample.weightG),
+            progressLabel = activeCaptureTarget.progressLabel(sample.weightG),
+            targetReachedLabel = activeCaptureTarget.targetReachedLabel(sample.weightG),
             captureElapsedLabel = "Capture elapsed: ${captureElapsedMs / 1_000L} s",
             averageFlowLabel = "Average flow: ${sample.averageFlowGPerS(captureElapsedMs).toOneDecimal()} g/s"
         )
@@ -173,11 +188,21 @@ class CaptureViewModel(
             is ScaleConnectionState.Error -> "Scale: Error"
         }
 
-    private fun createArmedShotCaptureEngine(): ShotCaptureEngine =
+    private fun createArmedShotCaptureEngine(target: CaptureTarget): ShotCaptureEngine =
         ShotCaptureEngine().also { engine ->
             engine.onScaleConnected()
             engine.onTareConfirmed()
-            engine.arm(MvpShotTarget.toCaptureTarget())
+            engine.arm(target)
+        }
+
+    private fun CaptureTarget.progressLabel(currentWeightG: Double): String =
+        "Progress: ${currentWeightG.toOneDecimal()} / ${targetYieldG.toOneDecimal()} g"
+
+    private fun CaptureTarget.targetReachedLabel(currentWeightG: Double): String =
+        if (currentWeightG >= targetYieldG) {
+            MvpShotTarget.TARGET_REACHED_LABEL
+        } else {
+            MvpShotTarget.TARGET_NOT_REACHED_LABEL
         }
 
     private fun nextCaptureSessionStartedAtMs(): Long {
