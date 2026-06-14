@@ -10,6 +10,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.espressoshotcapture.EspressoShotCaptureApplication
+import com.example.espressoshotcapture.ble.BleScaleScanCandidate
 import com.example.espressoshotcapture.capture.domain.CaptureTarget
 import com.example.espressoshotcapture.capture.domain.FakeScaleClient
 import com.example.espressoshotcapture.capture.domain.ScaleClient
@@ -33,17 +34,16 @@ import kotlin.math.roundToInt
 class CaptureViewModel(
     private val shotRepository: ShotRepository,
     private val scaleClient: ScaleClient,
+    private val selectedDecentScaleCandidate: StateFlow<BleScaleScanCandidate?> =
+        MutableStateFlow<BleScaleScanCandidate?>(null),
+    private val createDecentScaleClient: (BleScaleScanCandidate) -> ScaleClient = { scaleClient },
     private val saveDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val currentTimeMillis: () -> Long = System::currentTimeMillis,
     private val savedConfirmationDelayMs: Long = 3_000L
 ) : ViewModel() {
-    private val scaleModeLabel: String? = if (scaleClient is FakeScaleClient) {
-        "Fake scale simulation"
-    } else {
-        null
-    }
+    private var selectedScaleSource: CaptureScaleSource = CaptureScaleSource.FAKE
     private val _uiState = MutableStateFlow(
-        CaptureUiStateMapper.initialDisconnectedReady(scaleModeLabel = scaleModeLabel)
+        CaptureUiStateMapper.initialDisconnectedReady(scaleModeLabel = scaleModeLabelForSource())
     )
     val uiState: StateFlow<CaptureUiState> = _uiState.asStateFlow()
     private val _targetState = MutableStateFlow(MvpShotTarget.defaultState())
@@ -54,6 +54,12 @@ class CaptureViewModel(
     private var captureSessionStartedAtEpochMs: Long? = null
     private var firstScaleReadingTimestampMs: Long? = null
     private var lastCaptureSessionStartedAtEpochMs: Long? = null
+    private var activeScaleClient: ScaleClient = scaleClient
+    private var latestDecentScaleCandidate: BleScaleScanCandidate? = selectedDecentScaleCandidate.value
+    private var activeScaleConnectionState: ScaleConnectionState = ScaleConnectionState.Disconnected
+    private var realScaleHasReading: Boolean = false
+    private var scaleConnectionJob: Job? = null
+    private var realScaleReadinessJob: Job? = null
     private var activeCaptureTarget: CaptureTarget = requireNotNull(
         _targetState.value.toCaptureTargetOrNull()
     )
@@ -61,11 +67,16 @@ class CaptureViewModel(
 
     init {
         viewModelScope.launch {
-            scaleClient.connectionState.collect { connectionState ->
-                updateScaleConnectionLabel(connectionState.toScaleConnectionLabel())
+            selectedDecentScaleCandidate.collect { candidate ->
+                latestDecentScaleCandidate = candidate
+                if (selectedScaleSource == CaptureScaleSource.DECENT && _uiState.value.status == CaptureStatus.READY) {
+                    activateDecentScaleClient(candidate)
+                } else {
+                    updateCaptureSourceState()
+                }
             }
         }
-        scaleClient.connect()
+        selectFakeScaleSource()
     }
 
     fun onPrimaryAction() {
@@ -74,6 +85,20 @@ class CaptureViewModel(
             CaptureStatus.RECORDING -> stopAndSave()
             CaptureStatus.SAVED -> Unit
         }
+    }
+
+    fun selectFakeScaleSource() {
+        if (_uiState.value.status != CaptureStatus.READY) return
+        selectedScaleSource = CaptureScaleSource.FAKE
+        realScaleHasReading = false
+        activateScaleClient(scaleClient)
+    }
+
+    fun selectDecentScaleSource() {
+        if (_uiState.value.status != CaptureStatus.READY) return
+        selectedScaleSource = CaptureScaleSource.DECENT
+        realScaleHasReading = false
+        activateDecentScaleClient(latestDecentScaleCandidate)
     }
 
     fun updateTarget(doseGrams: Double, targetYieldGrams: Double) {
@@ -99,6 +124,10 @@ class CaptureViewModel(
     }
 
     private fun startRecording() {
+        if (!canStartCapture()) {
+            updateReadyPrimaryActionEnabled()
+            return
+        }
         val captureTarget = _targetState.value.toCaptureTargetOrNull() ?: return
         activeCaptureTarget = captureTarget
         recordingStartTimestampMs = null
@@ -107,7 +136,10 @@ class CaptureViewModel(
         shotCaptureEngine = createArmedShotCaptureEngine(activeCaptureTarget)
         _uiState.value = CaptureUiStateMapper.recording(
             scaleConnectionLabel = _uiState.value.scaleConnectionLabel,
-            scaleModeLabel = _uiState.value.scaleModeLabel
+            scaleModeLabel = scaleModeLabelForSource(),
+            selectedScaleSource = selectedScaleSource,
+            captureSourceStatusLabel = captureSourceStatusLabel(),
+            captureSourceMessage = captureSourceMessage()
         )
         startRecordingReadingUpdates()
     }
@@ -122,29 +154,37 @@ class CaptureViewModel(
             shotRepository.saveShotDraft(shotDraft)
             _uiState.value = CaptureUiStateMapper.savedConfirmation(
                 scaleConnectionLabel = _uiState.value.scaleConnectionLabel,
-                scaleModeLabel = _uiState.value.scaleModeLabel
+                scaleModeLabel = scaleModeLabelForSource(),
+                selectedScaleSource = selectedScaleSource,
+                captureSourceStatusLabel = captureSourceStatusLabel(),
+                captureSourceMessage = captureSourceMessage()
             )
             delay(savedConfirmationDelayMs)
             _uiState.value = CaptureUiStateMapper.ready(
                 scaleConnectionLabel = _uiState.value.scaleConnectionLabel,
-                scaleModeLabel = _uiState.value.scaleModeLabel
-            ).copy(isPrimaryActionEnabled = _targetState.value.isValid)
+                scaleModeLabel = scaleModeLabelForSource(),
+                selectedScaleSource = selectedScaleSource,
+                captureSourceStatusLabel = captureSourceStatusLabel(),
+                captureSourceMessage = captureSourceMessage(),
+                isPrimaryActionEnabled = canStartCapture()
+            )
         }
     }
 
     private fun startRecordingReadingUpdates() {
         stopRecordingReadingUpdates()
-        (scaleClient as? FakeScaleClient)?.resetReadings()
+        val captureScaleClient = activeScaleClient
+        (captureScaleClient as? FakeScaleClient)?.resetReadings()
 
         recordingReadingsJob = viewModelScope.launch {
-            scaleClient.readings.collect { reading ->
+            captureScaleClient.readings.collect { reading ->
                 if (_uiState.value.status == CaptureStatus.RECORDING) {
                     updateRecordingValues(reading)
                 }
             }
         }
 
-        val fakeScaleClient = scaleClient as? FakeScaleClient
+        val fakeScaleClient = captureScaleClient as? FakeScaleClient
         if (fakeScaleClient != null) {
             fakeReadingEmissionJob = viewModelScope.launch {
                 while (isActive && _uiState.value.status == CaptureStatus.RECORDING) {
@@ -191,17 +231,120 @@ class CaptureViewModel(
 
     private fun updateScaleConnectionLabel(scaleConnectionLabel: String) {
         _uiState.value = _uiState.value.copy(
-            scaleConnectionLabel = scaleConnectionLabel
+            scaleConnectionLabel = scaleConnectionLabel,
+            scaleModeLabel = scaleModeLabelForSource(),
+            captureSourceStatusLabel = captureSourceStatusLabel(),
+            captureSourceMessage = captureSourceMessage()
         )
+        updateReadyPrimaryActionEnabled()
     }
 
     private fun updateReadyPrimaryActionEnabled() {
         if (_uiState.value.status == CaptureStatus.READY) {
             _uiState.value = _uiState.value.copy(
-                isPrimaryActionEnabled = _targetState.value.isValid
+                isPrimaryActionEnabled = canStartCapture(),
+                selectedScaleSource = selectedScaleSource,
+                scaleModeLabel = scaleModeLabelForSource(),
+                captureSourceStatusLabel = captureSourceStatusLabel(),
+                captureSourceMessage = captureSourceMessage()
             )
         }
     }
+
+    private fun activateDecentScaleClient(candidate: BleScaleScanCandidate?) {
+        if (candidate == null) {
+            scaleConnectionJob?.cancel()
+            scaleConnectionJob = null
+            realScaleReadinessJob?.cancel()
+            realScaleReadinessJob = null
+            activeScaleConnectionState = ScaleConnectionState.Disconnected
+            activeScaleClient = scaleClient
+            updateScaleConnectionLabel(ScaleConnectionState.Disconnected.toScaleConnectionLabel())
+            return
+        }
+
+        activateScaleClient(createDecentScaleClient(candidate))
+    }
+
+    private fun activateScaleClient(client: ScaleClient) {
+        activeScaleClient = client
+        activeScaleConnectionState = ScaleConnectionState.Disconnected
+        scaleConnectionJob?.cancel()
+        realScaleReadinessJob?.cancel()
+        realScaleReadinessJob = null
+
+        scaleConnectionJob = viewModelScope.launch {
+            client.connectionState.collect { connectionState ->
+                if (activeScaleClient == client) {
+                    activeScaleConnectionState = connectionState
+                    updateScaleConnectionLabel(connectionState.toScaleConnectionLabel())
+                }
+            }
+        }
+
+        if (selectedScaleSource == CaptureScaleSource.DECENT) {
+            realScaleReadinessJob = viewModelScope.launch {
+                client.readings.collect {
+                    if (activeScaleClient == client && selectedScaleSource == CaptureScaleSource.DECENT) {
+                        realScaleHasReading = true
+                        updateCaptureSourceState()
+                    }
+                }
+            }
+        }
+
+        updateCaptureSourceState()
+        client.connect()
+    }
+
+    private fun updateCaptureSourceState() {
+        _uiState.value = _uiState.value.copy(
+            selectedScaleSource = selectedScaleSource,
+            scaleModeLabel = scaleModeLabelForSource(),
+            captureSourceStatusLabel = captureSourceStatusLabel(),
+            captureSourceMessage = captureSourceMessage()
+        )
+        updateReadyPrimaryActionEnabled()
+    }
+
+    private fun canStartCapture(): Boolean =
+        _targetState.value.isValid && when (selectedScaleSource) {
+            CaptureScaleSource.FAKE -> true
+            CaptureScaleSource.DECENT ->
+                latestDecentScaleCandidate != null &&
+                    activeScaleConnectionState == ScaleConnectionState.Connected &&
+                    realScaleHasReading
+        }
+
+    private fun captureSourceStatusLabel(): String =
+        when (selectedScaleSource) {
+            CaptureScaleSource.FAKE -> "Capture source: Fake scale/demo"
+            CaptureScaleSource.DECENT -> when {
+                latestDecentScaleCandidate == null -> "Capture source: Decent Scale/real unavailable"
+                activeScaleConnectionState != ScaleConnectionState.Connected ->
+                    "Capture source: Decent Scale/real not connected"
+                !realScaleHasReading -> "Capture source: Decent Scale/real waiting for readings"
+                else -> "Capture source: Decent Scale/real ready"
+            }
+        }
+
+    private fun captureSourceMessage(): String? =
+        when (selectedScaleSource) {
+            CaptureScaleSource.FAKE -> null
+            CaptureScaleSource.DECENT -> when {
+                latestDecentScaleCandidate == null -> "Connect Decent Scale in BLE debug first."
+                activeScaleConnectionState != ScaleConnectionState.Connected -> "Waiting for Decent Scale connection."
+                !realScaleHasReading -> "Waiting for live scale readings."
+                else -> null
+            }
+        }
+
+    private fun scaleModeLabelForSource(): String? =
+        if (selectedScaleSource == CaptureScaleSource.FAKE && scaleClient is FakeScaleClient) {
+            "Fake scale simulation"
+        } else {
+            null
+        }
 
     private fun ScaleConnectionState.toScaleConnectionLabel(): String =
         when (this) {
@@ -254,13 +397,18 @@ class CaptureViewModel(
 
     override fun onCleared() {
         stopRecordingReadingUpdates()
+        scaleConnectionJob?.cancel()
+        realScaleReadinessJob?.cancel()
         super.onCleared()
     }
 
     companion object {
         fun factory(
             shotRepository: ShotRepository,
-            scaleClient: ScaleClient
+            scaleClient: ScaleClient,
+            selectedDecentScaleCandidate: StateFlow<BleScaleScanCandidate?> =
+                MutableStateFlow<BleScaleScanCandidate?>(null),
+            createDecentScaleClient: (BleScaleScanCandidate) -> ScaleClient = { scaleClient }
         ): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
@@ -268,7 +416,9 @@ class CaptureViewModel(
                     if (modelClass.isAssignableFrom(CaptureViewModel::class.java)) {
                         return CaptureViewModel(
                             shotRepository = shotRepository,
-                            scaleClient = scaleClient
+                            scaleClient = scaleClient,
+                            selectedDecentScaleCandidate = selectedDecentScaleCandidate,
+                            createDecentScaleClient = createDecentScaleClient
                         ) as T
                     }
                     throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
@@ -286,7 +436,9 @@ fun CaptureRoute(
     val viewModel: CaptureViewModel = viewModel(
         factory = CaptureViewModel.factory(
             shotRepository = application.appContainer.shotRepository,
-            scaleClient = application.appContainer.scaleClient
+            scaleClient = application.appContainer.scaleClient,
+            selectedDecentScaleCandidate = application.appContainer.selectedDecentScaleCandidate,
+            createDecentScaleClient = application.appContainer::createDecentScaleClient
         )
     )
 
@@ -309,6 +461,8 @@ fun CaptureRoute(
         targetState = targetState,
         onDoseChanged = viewModel::updateDoseInput,
         onTargetYieldChanged = viewModel::updateTargetYieldInput,
+        onFakeScaleSelected = viewModel::selectFakeScaleSource,
+        onDecentScaleSelected = viewModel::selectDecentScaleSource,
         onPrimaryAction = viewModel::onPrimaryAction,
         modifier = modifier
     )

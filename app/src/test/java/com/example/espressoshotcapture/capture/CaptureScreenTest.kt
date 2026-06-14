@@ -37,13 +37,23 @@ class CaptureScreenTest {
 
         composeTestRule.onNodeWithText("Espresso Shot Capture").assertIsDisplayed()
         composeTestRule.onNodeWithText("Scale: Not connected").assertIsDisplayed()
+        composeTestRule.onNodeWithTag(CaptureScreenTestTags.FAKE_SOURCE)
+            .assertTextContains("Selected: Fake scale/demo")
+        composeTestRule.onNodeWithTag(CaptureScreenTestTags.DECENT_SOURCE)
+            .assertTextContains("Decent Scale/real")
+        composeTestRule.onNodeWithTag(CaptureScreenTestTags.SOURCE_STATUS)
+            .assertTextContains("Capture source: Fake scale/demo")
         composeTestRule.onNodeWithText("Dose in grams").assertIsDisplayed()
         composeTestRule.onNodeWithTag(CaptureScreenTestTags.DOSE_INPUT).assertTextContains("18.0")
         composeTestRule.onNodeWithText("Target yield in grams").assertIsDisplayed()
         composeTestRule.onNodeWithTag(CaptureScreenTestTags.TARGET_YIELD_INPUT).assertTextContains("36.0")
         composeTestRule.onNodeWithTag(CaptureScreenTestTags.RATIO_DISPLAY).assertTextContains("Ratio: 1:2")
-        composeTestRule.onNodeWithText("Progress: 0.0 / 36.0 g").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Target not reached").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Progress: 0.0 / 36.0 g")
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeTestRule.onNodeWithText("Target not reached")
+            .performScrollTo()
+            .assertIsDisplayed()
         composeTestRule.onNodeWithTag(CaptureScreenTestTags.STATUS)
             .performScrollTo()
             .assertIsDisplayed()
@@ -64,8 +74,12 @@ class CaptureScreenTest {
         composeTestRule.onNodeWithTag(CaptureScreenTestTags.DOSE_INPUT).assertTextContains("18.0")
         composeTestRule.onNodeWithTag(CaptureScreenTestTags.TARGET_YIELD_INPUT).assertTextContains("36.0")
         composeTestRule.onNodeWithTag(CaptureScreenTestTags.RATIO_DISPLAY).assertTextContains("Ratio: 1:2")
-        composeTestRule.onNodeWithText("Progress: 0.0 / 36.0 g").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Target not reached").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Progress: 0.0 / 36.0 g")
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeTestRule.onNodeWithText("Target not reached")
+            .performScrollTo()
+            .assertIsDisplayed()
         composeTestRule.onNodeWithTag(CaptureScreenTestTags.STATUS)
             .performScrollTo()
             .assertIsDisplayed()
@@ -86,6 +100,31 @@ class CaptureScreenTest {
 
         composeTestRule.onNodeWithText("Scale: Not connected").assertIsDisplayed()
         composeTestRule.onNodeWithText("Fake scale simulation").assertIsDisplayed()
+    }
+
+    @Test
+    fun sourceSelectionInvokesCallbacks() {
+        var fakeSelected = false
+        var realSelected = false
+
+        composeTestRule.activity.setContent {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                CaptureScreen(
+                    onFakeScaleSelected = { fakeSelected = true },
+                    onDecentScaleSelected = { realSelected = true }
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag(CaptureScreenTestTags.FAKE_SOURCE)
+            .performClick()
+        composeTestRule.onNodeWithTag(CaptureScreenTestTags.DECENT_SOURCE)
+            .performClick()
+
+        composeTestRule.runOnIdle {
+            assertTrue(fakeSelected)
+            assertTrue(realSelected)
+        }
     }
 
     @Test

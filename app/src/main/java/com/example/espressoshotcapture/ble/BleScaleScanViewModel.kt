@@ -9,7 +9,8 @@ import kotlinx.coroutines.flow.stateIn
 
 class BleScaleScanViewModel(
     private val scanner: BleScaleScanner,
-    private val gattClient: DecentScaleGattClient
+    private val gattClient: DecentScaleGattClient,
+    private val onExpectedScaleSelected: (BleScaleScanCandidate) -> Unit = {}
 ) : ViewModel() {
     val uiState: StateFlow<BleScaleScanState> = scanner.scanState.stateIn(
         scope = viewModelScope,
@@ -36,6 +37,7 @@ class BleScaleScanViewModel(
 
     fun connect(candidate: BleScaleScanCandidate) {
         if (!candidate.isExpectedScale) return
+        onExpectedScaleSelected(candidate)
         scanner.stopScan()
         gattClient.connect(candidate)
     }
@@ -49,13 +51,18 @@ class BleScaleScanViewModel(
     companion object {
         fun factory(
             scanner: BleScaleScanner,
-            gattClient: DecentScaleGattClient
+            gattClient: DecentScaleGattClient,
+            onExpectedScaleSelected: (BleScaleScanCandidate) -> Unit = {}
         ): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
                     if (modelClass.isAssignableFrom(BleScaleScanViewModel::class.java)) {
-                        return BleScaleScanViewModel(scanner, gattClient) as T
+                        return BleScaleScanViewModel(
+                            scanner = scanner,
+                            gattClient = gattClient,
+                            onExpectedScaleSelected = onExpectedScaleSelected
+                        ) as T
                     }
                     throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
                 }

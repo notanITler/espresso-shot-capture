@@ -6,10 +6,18 @@ enum class CaptureStatus {
     SAVED
 }
 
+enum class CaptureScaleSource {
+    FAKE,
+    DECENT
+}
+
 data class CaptureUiState(
     val status: CaptureStatus,
     val scaleConnectionLabel: String,
     val scaleModeLabel: String? = null,
+    val selectedScaleSource: CaptureScaleSource = CaptureScaleSource.FAKE,
+    val captureSourceStatusLabel: String = "Capture source: Fake scale/demo",
+    val captureSourceMessage: String? = null,
     val shotStatusLabel: String,
     val primaryActionLabel: String,
     val isPrimaryActionEnabled: Boolean,
@@ -32,23 +40,36 @@ object CaptureUiStateMapper {
 
     fun ready(
         scaleConnectionLabel: String,
-        scaleModeLabel: String? = null
+        scaleModeLabel: String? = null,
+        selectedScaleSource: CaptureScaleSource = CaptureScaleSource.FAKE,
+        captureSourceStatusLabel: String = "Capture source: Fake scale/demo",
+        captureSourceMessage: String? = null,
+        isPrimaryActionEnabled: Boolean = true
     ): CaptureUiState = CaptureUiState(
         status = CaptureStatus.READY,
         scaleConnectionLabel = scaleConnectionLabel,
         scaleModeLabel = scaleModeLabel,
+        selectedScaleSource = selectedScaleSource,
+        captureSourceStatusLabel = captureSourceStatusLabel,
+        captureSourceMessage = captureSourceMessage,
         shotStatusLabel = "Ready",
         primaryActionLabel = "Start capture",
-        isPrimaryActionEnabled = true
+        isPrimaryActionEnabled = isPrimaryActionEnabled
     )
 
     fun recording(
         scaleConnectionLabel: String = "Scale: Not connected",
-        scaleModeLabel: String? = null
+        scaleModeLabel: String? = null,
+        selectedScaleSource: CaptureScaleSource = CaptureScaleSource.FAKE,
+        captureSourceStatusLabel: String = "Capture source: Fake scale/demo",
+        captureSourceMessage: String? = null
     ): CaptureUiState = CaptureUiState(
         status = CaptureStatus.RECORDING,
         scaleConnectionLabel = scaleConnectionLabel,
         scaleModeLabel = scaleModeLabel,
+        selectedScaleSource = selectedScaleSource,
+        captureSourceStatusLabel = captureSourceStatusLabel,
+        captureSourceMessage = captureSourceMessage,
         shotStatusLabel = "Recording",
         primaryActionLabel = "Stop & save",
         isPrimaryActionEnabled = true,
@@ -59,11 +80,17 @@ object CaptureUiStateMapper {
 
     fun savedConfirmation(
         scaleConnectionLabel: String = "Scale: Not connected",
-        scaleModeLabel: String? = null
+        scaleModeLabel: String? = null,
+        selectedScaleSource: CaptureScaleSource = CaptureScaleSource.FAKE,
+        captureSourceStatusLabel: String = "Capture source: Fake scale/demo",
+        captureSourceMessage: String? = null
     ): CaptureUiState = CaptureUiState(
         status = CaptureStatus.SAVED,
         scaleConnectionLabel = scaleConnectionLabel,
         scaleModeLabel = scaleModeLabel,
+        selectedScaleSource = selectedScaleSource,
+        captureSourceStatusLabel = captureSourceStatusLabel,
+        captureSourceMessage = captureSourceMessage,
         shotStatusLabel = "Shot saved",
         primaryActionLabel = "Start capture",
         isPrimaryActionEnabled = false

@@ -12,9 +12,17 @@ import com.example.espressoshotcapture.capture.domain.FakeScaleClient
 import com.example.espressoshotcapture.capture.domain.ScaleClient
 import com.example.espressoshotcapture.persistence.EspressoShotDatabase
 import com.example.espressoshotcapture.repository.ShotRepository
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 class AppContainer(context: Context) {
     private val appContext = context.applicationContext
+    private val selectedDecentScaleCandidateState =
+        MutableStateFlow<BleScaleScanCandidate?>(null)
+
+    val selectedDecentScaleCandidate: StateFlow<BleScaleScanCandidate?> =
+        selectedDecentScaleCandidateState.asStateFlow()
 
     val database: EspressoShotDatabase by lazy {
         Room.databaseBuilder(
@@ -49,4 +57,8 @@ class AppContainer(context: Context) {
             gattClient = decentScaleGattClient,
             candidate = candidate
         )
+
+    fun selectDecentScaleCandidate(candidate: BleScaleScanCandidate) {
+        selectedDecentScaleCandidateState.value = candidate
+    }
 }

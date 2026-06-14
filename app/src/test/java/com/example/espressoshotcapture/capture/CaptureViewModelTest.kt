@@ -1,5 +1,6 @@
 package com.example.espressoshotcapture.capture
 
+import com.example.espressoshotcapture.ble.BleScaleScanCandidate
 import com.example.espressoshotcapture.capture.domain.FakeScaleClient
 import com.example.espressoshotcapture.capture.domain.ScaleClient
 import com.example.espressoshotcapture.capture.domain.ScaleConnectionState
@@ -73,6 +74,77 @@ class CaptureViewModelTest {
         assertEquals(36.0, targetState.targetYieldGrams, 0.0)
         assertEquals(2.0, targetState.ratio ?: error("Expected ratio"), 0.0)
         assertTrue(targetState.isValid)
+    }
+
+    @Test
+    fun fakeScaleIsDefaultCaptureSource() = runTest(testDispatcher) {
+        runCurrent()
+
+        assertEquals(CaptureScaleSource.FAKE, viewModel.uiState.value.selectedScaleSource)
+        assertEquals(
+            "Capture source: Fake scale/demo",
+            viewModel.uiState.value.captureSourceStatusLabel
+        )
+        assertTrue(viewModel.uiState.value.isPrimaryActionEnabled)
+    }
+
+    @Test
+    fun realScaleSourceWithoutSelectedCandidateDisablesStartCapture() = runTest(testDispatcher) {
+        runCurrent()
+
+        viewModel.selectDecentScaleSource()
+        runCurrent()
+
+        assertEquals(CaptureScaleSource.DECENT, viewModel.uiState.value.selectedScaleSource)
+        assertEquals(
+            "Capture source: Decent Scale/real unavailable",
+            viewModel.uiState.value.captureSourceStatusLabel
+        )
+        assertEquals(
+            "Connect Decent Scale in BLE debug first.",
+            viewModel.uiState.value.captureSourceMessage
+        )
+        assertFalse(viewModel.uiState.value.isPrimaryActionEnabled)
+
+        viewModel.onPrimaryAction()
+        runCurrent()
+
+        assertEquals(CaptureStatus.READY, viewModel.uiState.value.status)
+    }
+
+    @Test
+    fun realScaleSourceWaitsForLiveReadingBeforeStartCapture() = runTest(testDispatcher) {
+        val selectedCandidate = MutableStateFlow(expectedScaleCandidate())
+        val realScaleClient = TestScaleClient()
+        viewModel = CaptureViewModel(
+            shotRepository = ShotRepository(dao),
+            scaleClient = scaleClient,
+            selectedDecentScaleCandidate = selectedCandidate,
+            createDecentScaleClient = { realScaleClient },
+            saveDispatcher = testDispatcher,
+            currentTimeMillis = { 123_456L },
+            savedConfirmationDelayMs = 1_000L
+        )
+        runCurrent()
+
+        viewModel.selectDecentScaleSource()
+        runCurrent()
+
+        assertEquals("Scale: Connected", viewModel.uiState.value.scaleConnectionLabel)
+        assertEquals(
+            "Capture source: Decent Scale/real waiting for readings",
+            viewModel.uiState.value.captureSourceStatusLabel
+        )
+        assertFalse(viewModel.uiState.value.isPrimaryActionEnabled)
+
+        realScaleClient.emitReading(ScaleReading(timestampMillis = 0L, weightGrams = 0.0))
+        runCurrent()
+
+        assertEquals(
+            "Capture source: Decent Scale/real ready",
+            viewModel.uiState.value.captureSourceStatusLabel
+        )
+        assertTrue(viewModel.uiState.value.isPrimaryActionEnabled)
     }
 
     @Test
@@ -401,6 +473,44 @@ class CaptureViewModelTest {
     }
 
     @Test
+    fun realScaleCaptureUsesRealReadingsAndSavePath() = runTest(testDispatcher) {
+        val selectedCandidate = MutableStateFlow(expectedScaleCandidate())
+        val realScaleClient = TestScaleClient()
+        viewModel = CaptureViewModel(
+            shotRepository = ShotRepository(dao),
+            scaleClient = scaleClient,
+            selectedDecentScaleCandidate = selectedCandidate,
+            createDecentScaleClient = { realScaleClient },
+            saveDispatcher = testDispatcher,
+            currentTimeMillis = { 123_456L },
+            savedConfirmationDelayMs = 1_000L
+        )
+        runCurrent()
+
+        viewModel.selectDecentScaleSource()
+        runCurrent()
+        realScaleClient.emitReading(ScaleReading(timestampMillis = 0L, weightGrams = 0.0))
+        runCurrent()
+
+        viewModel.onPrimaryAction()
+        runCurrent()
+        realScaleClient.emitReading(ScaleReading(timestampMillis = 0L, weightGrams = 0.0))
+        runCurrent()
+        realScaleClient.emitReading(ScaleReading(timestampMillis = 1_000L, weightGrams = 0.8))
+        runCurrent()
+
+        viewModel.onPrimaryAction()
+        runCurrent()
+
+        val savedShot = dao.getAllShotsOnce().single()
+        assertTrue(savedShot.json.contains(""""actualYieldG":0.8"""))
+        assertTrue(savedShot.json.contains(""""flowTimeMs":1000"""))
+        assertTrue(savedShot.json.contains(""""weightGRaw":0.8"""))
+        assertTrue(savedShot.json.contains(""""doseG":18.0"""))
+        assertTrue(savedShot.json.contains(""""targetYieldG":36.0"""))
+    }
+
+    @Test
     fun activeTargetIsSnapshottedWhenRecordingStarts() = runTest(testDispatcher) {
         viewModel.updateTarget(doseGrams = 20.0, targetYieldGrams = 40.0)
         runCurrent()
@@ -572,6 +682,16 @@ class CaptureViewModelTest {
         advanceTimeBy(1_000L)
         runCurrent()
     }
+
+    private fun expectedScaleCandidate(): BleScaleScanCandidate =
+        BleScaleScanCandidate(
+            name = "Decent Scale",
+            address = "10:20:BA:15:79:31",
+            advertisedServiceUuids = emptyList(),
+            rssi = -65,
+            matchesExpectedName = true,
+            matchesExpectedService = false
+        )
 }
 
 private class TestScaleClient : ScaleClient {

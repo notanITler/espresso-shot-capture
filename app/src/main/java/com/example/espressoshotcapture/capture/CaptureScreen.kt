@@ -21,6 +21,8 @@ fun CaptureScreen(
     targetState: CaptureTargetState = MvpShotTarget.defaultState(),
     onDoseChanged: (String) -> Unit = {},
     onTargetYieldChanged: (String) -> Unit = {},
+    onFakeScaleSelected: () -> Unit = {},
+    onDecentScaleSelected: () -> Unit = {},
     onPrimaryAction: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -39,6 +41,33 @@ fun CaptureScreen(
         BasicText(text = uiState.scaleConnectionLabel)
         uiState.scaleModeLabel?.let { scaleModeLabel ->
             BasicText(text = scaleModeLabel)
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        BasicText(
+            text = "Capture source",
+            style = TextStyle(fontWeight = FontWeight.SemiBold)
+        )
+        BasicText(
+            text = uiState.fakeScaleSourceLabel(),
+            modifier = Modifier
+                .testTag(CaptureScreenTestTags.FAKE_SOURCE)
+                .clickable(onClick = onFakeScaleSelected)
+        )
+        BasicText(
+            text = uiState.decentScaleSourceLabel(),
+            modifier = Modifier
+                .testTag(CaptureScreenTestTags.DECENT_SOURCE)
+                .clickable(onClick = onDecentScaleSelected)
+        )
+        BasicText(
+            text = uiState.captureSourceStatusLabel,
+            modifier = Modifier.testTag(CaptureScreenTestTags.SOURCE_STATUS)
+        )
+        uiState.captureSourceMessage?.let { sourceMessage ->
+            BasicText(
+                text = sourceMessage,
+                modifier = Modifier.testTag(CaptureScreenTestTags.SOURCE_MESSAGE)
+            )
         }
         Spacer(modifier = Modifier.height(8.dp))
         BasicText(
@@ -112,6 +141,10 @@ fun CaptureScreen(
 }
 
 object CaptureScreenTestTags {
+    const val FAKE_SOURCE = "fake-scale-source"
+    const val DECENT_SOURCE = "decent-scale-source"
+    const val SOURCE_STATUS = "capture-source-status"
+    const val SOURCE_MESSAGE = "capture-source-message"
     const val DOSE_INPUT = "dose-input"
     const val TARGET_YIELD_INPUT = "target-yield-input"
     const val RATIO_DISPLAY = "ratio-display"
@@ -122,6 +155,20 @@ object CaptureScreenTestTags {
     const val RECORDING_CAPTURE_ELAPSED = "recording-capture-elapsed"
     const val RECORDING_AVERAGE_FLOW = "recording-average-flow"
 }
+
+private fun CaptureUiState.fakeScaleSourceLabel(): String =
+    if (selectedScaleSource == CaptureScaleSource.FAKE) {
+        "Selected: Fake scale/demo"
+    } else {
+        "Fake scale/demo"
+    }
+
+private fun CaptureUiState.decentScaleSourceLabel(): String =
+    if (selectedScaleSource == CaptureScaleSource.DECENT) {
+        "Selected: Decent Scale/real"
+    } else {
+        "Decent Scale/real"
+    }
 
 @Preview
 @Composable

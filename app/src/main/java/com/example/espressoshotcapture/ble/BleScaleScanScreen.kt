@@ -31,7 +31,8 @@ fun BleScaleScanRoute(
     val viewModel: BleScaleScanViewModel = viewModel(
         factory = BleScaleScanViewModel.factory(
             scanner = application.appContainer.bleScaleScanner,
-            gattClient = application.appContainer.decentScaleGattClient
+            gattClient = application.appContainer.decentScaleGattClient,
+            onExpectedScaleSelected = application.appContainer::selectDecentScaleCandidate
         )
     )
     val uiState by viewModel.uiState.collectAsState()
