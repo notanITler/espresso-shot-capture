@@ -4,6 +4,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -17,9 +18,15 @@ import com.example.espressoshotcapture.ui.SectionContainer
 @Composable
 fun CaptureScreen(
     uiState: CaptureUiState = CaptureUiStateMapper.initialDisconnectedReady(),
+    targetState: CaptureTargetState = MvpShotTarget.defaultState(),
+    onDoseChanged: (String) -> Unit = {},
+    onTargetYieldChanged: (String) -> Unit = {},
     onPrimaryAction: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    val isPrimaryActionEnabled = uiState.isPrimaryActionEnabled &&
+        (uiState.status != CaptureStatus.READY || targetState.isValid)
+
     SectionContainer(
         title = "Capture",
         modifier = modifier
@@ -38,9 +45,30 @@ fun CaptureScreen(
             text = "Target",
             style = TextStyle(fontWeight = FontWeight.SemiBold)
         )
-        BasicText(text = uiState.doseLabel)
-        BasicText(text = uiState.targetYieldLabel)
-        BasicText(text = uiState.ratioLabel)
+        BasicText(text = "Dose in grams")
+        BasicTextField(
+            value = targetState.doseInputValue,
+            onValueChange = onDoseChanged,
+            singleLine = true,
+            modifier = Modifier.testTag(CaptureScreenTestTags.DOSE_INPUT)
+        )
+        BasicText(text = "Target yield in grams")
+        BasicTextField(
+            value = targetState.targetYieldInputValue,
+            onValueChange = onTargetYieldChanged,
+            singleLine = true,
+            modifier = Modifier.testTag(CaptureScreenTestTags.TARGET_YIELD_INPUT)
+        )
+        BasicText(
+            text = targetState.ratioLabel,
+            modifier = Modifier.testTag(CaptureScreenTestTags.RATIO_DISPLAY)
+        )
+        targetState.validationMessage?.let { validationMessage ->
+            BasicText(
+                text = validationMessage,
+                modifier = Modifier.testTag(CaptureScreenTestTags.VALIDATION_MESSAGE)
+            )
+        }
         Spacer(modifier = Modifier.height(8.dp))
         BasicText(
             text = "Live shot",
@@ -48,13 +76,18 @@ fun CaptureScreen(
         )
         BasicText(text = uiState.progressLabel)
         BasicText(text = uiState.targetReachedLabel)
-        BasicText(text = uiState.shotStatusLabel)
+        BasicText(
+            text = uiState.shotStatusLabel,
+            modifier = Modifier.testTag(CaptureScreenTestTags.STATUS)
+        )
         BasicText(
             text = uiState.primaryActionLabel,
-            modifier = if (uiState.isPrimaryActionEnabled) {
-                Modifier.clickable(onClick = onPrimaryAction)
-            } else {
+            modifier = if (isPrimaryActionEnabled) {
                 Modifier
+                    .testTag(CaptureScreenTestTags.PRIMARY_ACTION)
+                    .clickable(onClick = onPrimaryAction)
+            } else {
+                Modifier.testTag(CaptureScreenTestTags.PRIMARY_ACTION)
             }
         )
         uiState.currentWeightLabel?.let { currentWeightLabel ->
@@ -79,6 +112,12 @@ fun CaptureScreen(
 }
 
 object CaptureScreenTestTags {
+    const val DOSE_INPUT = "dose-input"
+    const val TARGET_YIELD_INPUT = "target-yield-input"
+    const val RATIO_DISPLAY = "ratio-display"
+    const val VALIDATION_MESSAGE = "target-validation-message"
+    const val PRIMARY_ACTION = "primary-capture-action"
+    const val STATUS = "capture-status"
     const val RECORDING_WEIGHT = "recording-weight"
     const val RECORDING_CAPTURE_ELAPSED = "recording-capture-elapsed"
     const val RECORDING_AVERAGE_FLOW = "recording-average-flow"

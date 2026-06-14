@@ -4,7 +4,12 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -12,6 +17,8 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextClearance
+import androidx.compose.ui.test.performTextInput
 import com.example.espressoshotcapture.MainActivity
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -26,77 +33,163 @@ class CaptureScreenTest {
 
     @Test
     fun keyCaptureLabelsAreDisplayed() {
-        composeTestRule.activity.setContent {
-            CaptureScreen()
-        }
+        setScrollableCaptureContent()
 
         composeTestRule.onNodeWithText("Espresso Shot Capture").assertIsDisplayed()
         composeTestRule.onNodeWithText("Scale: Not connected").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Dose: 18.0 g").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Target yield: 36.0 g").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Ratio: 1:2").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Dose in grams").assertIsDisplayed()
+        composeTestRule.onNodeWithTag(CaptureScreenTestTags.DOSE_INPUT).assertTextContains("18.0")
+        composeTestRule.onNodeWithText("Target yield in grams").assertIsDisplayed()
+        composeTestRule.onNodeWithTag(CaptureScreenTestTags.TARGET_YIELD_INPUT).assertTextContains("36.0")
+        composeTestRule.onNodeWithTag(CaptureScreenTestTags.RATIO_DISPLAY).assertTextContains("Ratio: 1:2")
         composeTestRule.onNodeWithText("Progress: 0.0 / 36.0 g").assertIsDisplayed()
         composeTestRule.onNodeWithText("Target not reached").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Ready").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Start capture").assertIsDisplayed()
+        composeTestRule.onNodeWithTag(CaptureScreenTestTags.STATUS)
+            .performScrollTo()
+            .assertIsDisplayed()
+            .assertTextContains("Ready")
+        composeTestRule.onNodeWithTag(CaptureScreenTestTags.PRIMARY_ACTION)
+            .performScrollTo()
+            .assertIsDisplayed()
+            .assertTextContains("Start capture")
     }
 
     @Test
     fun defaultUiStateHasPlaceholderLabels() {
         val uiState = CaptureUiStateMapper.initialDisconnectedReady()
 
-        composeTestRule.activity.setContent {
-            CaptureScreen(uiState = uiState)
-        }
+        setScrollableCaptureContent(uiState = uiState)
 
         composeTestRule.onNodeWithText("Scale: Not connected").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Dose: 18.0 g").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Target yield: 36.0 g").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Ratio: 1:2").assertIsDisplayed()
+        composeTestRule.onNodeWithTag(CaptureScreenTestTags.DOSE_INPUT).assertTextContains("18.0")
+        composeTestRule.onNodeWithTag(CaptureScreenTestTags.TARGET_YIELD_INPUT).assertTextContains("36.0")
+        composeTestRule.onNodeWithTag(CaptureScreenTestTags.RATIO_DISPLAY).assertTextContains("Ratio: 1:2")
         composeTestRule.onNodeWithText("Progress: 0.0 / 36.0 g").assertIsDisplayed()
         composeTestRule.onNodeWithText("Target not reached").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Ready").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Start capture").assertIsDisplayed()
+        composeTestRule.onNodeWithTag(CaptureScreenTestTags.STATUS)
+            .performScrollTo()
+            .assertIsDisplayed()
+            .assertTextContains("Ready")
+        composeTestRule.onNodeWithTag(CaptureScreenTestTags.PRIMARY_ACTION)
+            .performScrollTo()
+            .assertIsDisplayed()
+            .assertTextContains("Start capture")
     }
 
     @Test
     fun demoScaleLabelIsDisplayedWhenProvidedByUiState() {
-        composeTestRule.activity.setContent {
-            CaptureScreen(
-                uiState = CaptureUiStateMapper.initialDisconnectedReady(
-                    scaleModeLabel = "Fake scale simulation"
-                )
+        setScrollableCaptureContent(
+            uiState = CaptureUiStateMapper.initialDisconnectedReady(
+                scaleModeLabel = "Fake scale simulation"
             )
-        }
+        )
 
         composeTestRule.onNodeWithText("Scale: Not connected").assertIsDisplayed()
         composeTestRule.onNodeWithText("Fake scale simulation").assertIsDisplayed()
     }
 
     @Test
+    fun editingDoseUpdatesRatioDisplay() {
+        composeTestRule.activity.setContent {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                var targetState by remember {
+                    mutableStateOf(MvpShotTarget.defaultState())
+                }
+                CaptureScreen(
+                    targetState = targetState,
+                    onDoseChanged = { input ->
+                        targetState = CaptureTargetState(
+                            doseGrams = input.toDoubleOrNull() ?: Double.NaN,
+                            targetYieldGrams = targetState.targetYieldGrams
+                        )
+                    }
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag(CaptureScreenTestTags.DOSE_INPUT)
+            .performTextClearance()
+        composeTestRule.onNodeWithTag(CaptureScreenTestTags.DOSE_INPUT)
+            .performTextInput("20.0")
+
+        composeTestRule.onNodeWithTag(CaptureScreenTestTags.RATIO_DISPLAY)
+            .assertTextContains("Ratio: 1:1.8")
+    }
+
+    @Test
+    fun editingTargetYieldUpdatesRatioDisplay() {
+        composeTestRule.activity.setContent {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                var targetState by remember {
+                    mutableStateOf(MvpShotTarget.defaultState())
+                }
+                CaptureScreen(
+                    targetState = targetState,
+                    onTargetYieldChanged = { input ->
+                        targetState = CaptureTargetState(
+                            doseGrams = targetState.doseGrams,
+                            targetYieldGrams = input.toDoubleOrNull() ?: Double.NaN
+                        )
+                    }
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag(CaptureScreenTestTags.TARGET_YIELD_INPUT)
+            .performTextClearance()
+        composeTestRule.onNodeWithTag(CaptureScreenTestTags.TARGET_YIELD_INPUT)
+            .performTextInput("45.0")
+
+        composeTestRule.onNodeWithTag(CaptureScreenTestTags.RATIO_DISPLAY)
+            .assertTextContains("Ratio: 1:2.5")
+    }
+
+    @Test
+    fun invalidTargetShowsValidationMessage() {
+        setScrollableCaptureContent(
+            targetState = CaptureTargetState(
+                doseGrams = 0.0,
+                targetYieldGrams = 36.0
+            )
+        )
+
+        composeTestRule.onNodeWithTag(CaptureScreenTestTags.VALIDATION_MESSAGE)
+            .performScrollTo()
+            .assertIsDisplayed()
+            .assertTextContains("Enter a positive dose and target yield.")
+    }
+
+    @Test
     fun primaryActionInvokesCallback() {
         var clicked = false
 
-        composeTestRule.activity.setContent {
-            CaptureScreen(
-                uiState = CaptureUiStateMapper.initialDisconnectedReady(),
-                onPrimaryAction = { clicked = true }
-            )
+        setScrollableCaptureContent(
+            uiState = CaptureUiStateMapper.initialDisconnectedReady(),
+            onPrimaryAction = { clicked = true }
+        )
+
+        composeTestRule.onNodeWithTag(CaptureScreenTestTags.PRIMARY_ACTION)
+            .performScrollTo()
+            .assertHasClickAction()
+            .performClick()
+
+        composeTestRule.runOnIdle {
+            assertTrue(clicked)
         }
-
-        composeTestRule.onNodeWithText("Start capture").performClick()
-
-        assertTrue(clicked)
     }
 
     @Test
     fun stopAndSaveIsShownInRecording() {
-        composeTestRule.activity.setContent {
-            CaptureScreen(uiState = CaptureUiStateMapper.recording())
-        }
+        setScrollableCaptureContent(uiState = CaptureUiStateMapper.recording())
 
-        composeTestRule.onNodeWithText("Recording").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Stop & save").assertIsDisplayed()
+        composeTestRule.onNodeWithTag(CaptureScreenTestTags.STATUS)
+            .performScrollTo()
+            .assertIsDisplayed()
+            .assertTextContains("Recording")
+        composeTestRule.onNodeWithTag(CaptureScreenTestTags.PRIMARY_ACTION)
+            .performScrollTo()
+            .assertIsDisplayed()
+            .assertTextContains("Stop & save")
     }
 
     @Test
@@ -128,25 +221,42 @@ class CaptureScreenTest {
 
     @Test
     fun targetReachedIsDisplayedWhenProvidedByUiState() {
-        composeTestRule.activity.setContent {
-            CaptureScreen(
-                uiState = CaptureUiStateMapper.recording().copy(
-                    currentWeightLabel = "Weight: 36.0 g",
-                    progressLabel = "Progress: 36.0 / 36.0 g",
-                    targetReachedLabel = "Target reached"
-                )
+        setScrollableCaptureContent(
+            uiState = CaptureUiStateMapper.recording().copy(
+                currentWeightLabel = "Weight: 36.0 g",
+                progressLabel = "Progress: 36.0 / 36.0 g",
+                targetReachedLabel = "Target reached"
             )
-        }
+        )
 
-        composeTestRule.onNodeWithText("Target reached").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Target reached")
+            .performScrollTo()
+            .assertIsDisplayed()
     }
 
     @Test
     fun shotSavedConfirmationIsDisplayedAfterSaving() {
-        composeTestRule.activity.setContent {
-            CaptureScreen(uiState = CaptureUiStateMapper.savedConfirmation())
-        }
+        setScrollableCaptureContent(uiState = CaptureUiStateMapper.savedConfirmation())
 
-        composeTestRule.onNodeWithText("Shot saved").assertIsDisplayed()
+        composeTestRule.onNodeWithTag(CaptureScreenTestTags.STATUS)
+            .performScrollTo()
+            .assertIsDisplayed()
+            .assertTextContains("Shot saved")
+    }
+
+    private fun setScrollableCaptureContent(
+        uiState: CaptureUiState = CaptureUiStateMapper.initialDisconnectedReady(),
+        targetState: CaptureTargetState = MvpShotTarget.defaultState(),
+        onPrimaryAction: () -> Unit = {}
+    ) {
+        composeTestRule.activity.setContent {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                CaptureScreen(
+                    uiState = uiState,
+                    targetState = targetState,
+                    onPrimaryAction = onPrimaryAction
+                )
+            }
+        }
     }
 }

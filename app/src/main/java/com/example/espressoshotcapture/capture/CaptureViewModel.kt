@@ -10,8 +10,8 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.espressoshotcapture.EspressoShotCaptureApplication
-import com.example.espressoshotcapture.capture.domain.FakeScaleClient
 import com.example.espressoshotcapture.capture.domain.CaptureTarget
+import com.example.espressoshotcapture.capture.domain.FakeScaleClient
 import com.example.espressoshotcapture.capture.domain.ScaleClient
 import com.example.espressoshotcapture.capture.domain.ScaleConnectionState
 import com.example.espressoshotcapture.capture.domain.ScaleReading
@@ -81,6 +81,21 @@ class CaptureViewModel(
             doseGrams = doseGrams,
             targetYieldGrams = targetYieldGrams
         )
+        updateReadyPrimaryActionEnabled()
+    }
+
+    fun updateDoseInput(input: String) {
+        updateTarget(
+            doseGrams = input.toDoubleOrNull() ?: Double.NaN,
+            targetYieldGrams = _targetState.value.targetYieldGrams
+        )
+    }
+
+    fun updateTargetYieldInput(input: String) {
+        updateTarget(
+            doseGrams = _targetState.value.doseGrams,
+            targetYieldGrams = input.toDoubleOrNull() ?: Double.NaN
+        )
     }
 
     private fun startRecording() {
@@ -113,7 +128,7 @@ class CaptureViewModel(
             _uiState.value = CaptureUiStateMapper.ready(
                 scaleConnectionLabel = _uiState.value.scaleConnectionLabel,
                 scaleModeLabel = _uiState.value.scaleModeLabel
-            )
+            ).copy(isPrimaryActionEnabled = _targetState.value.isValid)
         }
     }
 
@@ -178,6 +193,14 @@ class CaptureViewModel(
         _uiState.value = _uiState.value.copy(
             scaleConnectionLabel = scaleConnectionLabel
         )
+    }
+
+    private fun updateReadyPrimaryActionEnabled() {
+        if (_uiState.value.status == CaptureStatus.READY) {
+            _uiState.value = _uiState.value.copy(
+                isPrimaryActionEnabled = _targetState.value.isValid
+            )
+        }
     }
 
     private fun ScaleConnectionState.toScaleConnectionLabel(): String =
@@ -279,9 +302,13 @@ fun CaptureRoute(
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val targetState by viewModel.targetState.collectAsState()
 
     CaptureScreen(
         uiState = uiState,
+        targetState = targetState,
+        onDoseChanged = viewModel::updateDoseInput,
+        onTargetYieldChanged = viewModel::updateTargetYieldInput,
         onPrimaryAction = viewModel::onPrimaryAction,
         modifier = modifier
     )

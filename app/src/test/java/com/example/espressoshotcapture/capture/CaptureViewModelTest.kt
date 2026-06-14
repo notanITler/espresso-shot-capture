@@ -93,6 +93,7 @@ class CaptureViewModelTest {
         val targetState = viewModel.targetState.value
         assertFalse(targetState.isValid)
         assertNull(targetState.ratio)
+        assertFalse(viewModel.uiState.value.isPrimaryActionEnabled)
     }
 
     @Test
@@ -102,6 +103,17 @@ class CaptureViewModelTest {
         val targetState = viewModel.targetState.value
         assertFalse(targetState.isValid)
         assertNull(targetState.ratio)
+        assertFalse(viewModel.uiState.value.isPrimaryActionEnabled)
+    }
+
+    @Test
+    fun invalidTargetDoesNotStartRecording() = runTest(testDispatcher) {
+        viewModel.updateTarget(doseGrams = 0.0, targetYieldGrams = 36.0)
+
+        viewModel.onPrimaryAction()
+        runCurrent()
+
+        assertEquals(CaptureStatus.READY, viewModel.uiState.value.status)
     }
 
     @Test
@@ -386,6 +398,24 @@ class CaptureViewModelTest {
         assertTrue(savedShot.json.contains(""""doseG":19.0"""))
         assertTrue(savedShot.json.contains(""""targetRatio":2.0"""))
         assertTrue(savedShot.json.contains(""""targetYieldG":38.0"""))
+    }
+
+    @Test
+    fun activeTargetIsSnapshottedWhenRecordingStarts() = runTest(testDispatcher) {
+        viewModel.updateTarget(doseGrams = 20.0, targetYieldGrams = 40.0)
+        runCurrent()
+
+        viewModel.onPrimaryAction()
+        runCurrent()
+
+        viewModel.updateTarget(doseGrams = 18.0, targetYieldGrams = 36.0)
+        viewModel.onPrimaryAction()
+        runCurrent()
+
+        val savedShot = dao.getAllShotsOnce().single()
+        assertTrue(savedShot.json.contains(""""doseG":20.0"""))
+        assertTrue(savedShot.json.contains(""""targetRatio":2.0"""))
+        assertTrue(savedShot.json.contains(""""targetYieldG":40.0"""))
     }
 
     @Test

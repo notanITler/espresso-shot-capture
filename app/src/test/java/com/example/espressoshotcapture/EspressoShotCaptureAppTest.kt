@@ -1,8 +1,12 @@
 package com.example.espressoshotcapture
 
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performScrollTo
+import com.example.espressoshotcapture.capture.CaptureScreenTestTags
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -17,6 +21,9 @@ class EspressoShotCaptureAppTest {
     fun appRootShowsCaptureSkeleton() {
         composeTestRule.onNodeWithText("Espresso Shot Capture").assertIsDisplayed()
         composeTestRule.onNodeWithText("Scale: Connected").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Start capture").assertIsDisplayed()
+        composeTestRule.onNodeWithTag(CaptureScreenTestTags.PRIMARY_ACTION)
+            .performScrollTo()
+            .assertIsDisplayed()
+            .assertTextContains("Start capture")
     }
 }
