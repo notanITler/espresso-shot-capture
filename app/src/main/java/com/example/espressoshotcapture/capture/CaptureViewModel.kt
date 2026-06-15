@@ -41,7 +41,7 @@ class CaptureViewModel(
     private val createDecentScaleClient: (BleScaleScanCandidate) -> ScaleClient = { scaleClient },
     private val saveDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val currentTimeMillis: () -> Long = System::currentTimeMillis,
-    private val savedConfirmationDelayMs: Long = 3_000L
+private val savedConfirmationDelayMs: Long = 3_000L
 ) : ViewModel() {
     private var selectedScaleSource: CaptureScaleSource = CaptureScaleSource.FAKE
     private val _uiState = MutableStateFlow(
@@ -63,6 +63,7 @@ class CaptureViewModel(
     private var realScaleHasReading: Boolean = false
     private var scaleConnectionJob: Job? = null
     private var realScaleReadinessJob: Job? = null
+    private var realScaleFreshnessJob: Job? = null
     private var activeCaptureTarget: CaptureTarget = requireNotNull(
         _targetState.value.toCaptureTargetOrNull()
     )
@@ -263,6 +264,8 @@ class CaptureViewModel(
             scaleConnectionJob = null
             realScaleReadinessJob?.cancel()
             realScaleReadinessJob = null
+            realScaleFreshnessJob?.cancel()
+            realScaleFreshnessJob = null
             activeScaleConnectionState = ScaleConnectionState.Disconnected
             activeScaleClient = scaleClient
             updateScaleConnectionLabel(ScaleConnectionState.Disconnected.toScaleConnectionLabel())
@@ -278,11 +281,18 @@ class CaptureViewModel(
         scaleConnectionJob?.cancel()
         realScaleReadinessJob?.cancel()
         realScaleReadinessJob = null
+        realScaleFreshnessJob?.cancel()
+        realScaleFreshnessJob = null
 
         scaleConnectionJob = viewModelScope.launch {
             client.connectionState.collect { connectionState ->
                 if (activeScaleClient == client) {
                     activeScaleConnectionState = connectionState
+                    if (connectionState != ScaleConnectionState.Connected) {
+                        realScaleHasReading = false
+                        realScaleFreshnessJob?.cancel()
+                        realScaleFreshnessJob = null
+                    }
                     updateScaleConnectionLabel(connectionState.toScaleConnectionLabel())
                 }
             }
@@ -292,7 +302,9 @@ class CaptureViewModel(
             realScaleReadinessJob = viewModelScope.launch {
                 client.readings.collect {
                     if (activeScaleClient == client && selectedScaleSource == CaptureScaleSource.DECENT) {
+                        activeScaleConnectionState = ScaleConnectionState.Connected
                         realScaleHasReading = true
+                        scheduleRealScaleFreshnessTimeout()
                         updateCaptureSourceState()
                     }
                 }
@@ -321,6 +333,18 @@ class CaptureViewModel(
                     activeScaleConnectionState == ScaleConnectionState.Connected &&
                     realScaleHasReading
         }
+
+    private fun scheduleRealScaleFreshnessTimeout() {
+        realScaleFreshnessJob?.cancel()
+        realScaleFreshnessJob = viewModelScope.launch {
+            delay(REAL_SCALE_READING_FRESHNESS_MS)
+            if (selectedScaleSource == CaptureScaleSource.DECENT) {
+                realScaleHasReading = false
+                activeScaleConnectionState = ScaleConnectionState.Disconnected
+                updateScaleConnectionLabel(ScaleConnectionState.Disconnected.toScaleConnectionLabel())
+            }
+        }
+    }
 
     private fun captureSourceStatusLabel(): String =
         when (selectedScaleSource) {
@@ -411,10 +435,13 @@ class CaptureViewModel(
         stopRecordingReadingUpdates()
         scaleConnectionJob?.cancel()
         realScaleReadinessJob?.cancel()
+        realScaleFreshnessJob?.cancel()
         super.onCleared()
     }
 
     companion object {
+        private const val REAL_SCALE_READING_FRESHNESS_MS = 1_500L
+
         fun factory(
             shotRepository: ShotRepository,
             scaleClient: ScaleClient,

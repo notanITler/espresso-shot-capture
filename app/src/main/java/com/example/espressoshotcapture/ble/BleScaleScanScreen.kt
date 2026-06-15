@@ -55,6 +55,7 @@ fun BleScaleScanRoute(
         },
         onStopScan = viewModel::stopScan,
         onCandidateSelected = viewModel::connect,
+        onTare = viewModel::sendTare,
         modifier = modifier
     )
 }
@@ -66,6 +67,7 @@ fun BleScaleScanScreen(
     onStartScan: () -> Unit,
     onStopScan: () -> Unit,
     onCandidateSelected: (BleScaleScanCandidate) -> Unit,
+    onTare: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -127,6 +129,13 @@ fun BleScaleScanScreen(
             BasicText(text = gattState.connectionLabel)
             BasicText(text = gattState.notifyCharacteristicLabel)
             BasicText(text = gattState.writeCharacteristicLabel)
+            BasicText(text = gattState.tareStatusLabel)
+            if (gattState.canSendTare) {
+                BasicText(
+                    text = "Tare",
+                    modifier = Modifier.clickable(onClick = onTare)
+                )
+            }
             BasicText(text = gattState.latestRawPacketLabel)
             BasicText(text = gattState.latestWeightLabel)
             BasicText(text = gattState.latestTimestampLabel)
@@ -153,6 +162,7 @@ private fun BleScaleScanScreenPreview() {
         gattState = DecentScaleGattState(),
         onStartScan = {},
         onStopScan = {},
-        onCandidateSelected = {}
+        onCandidateSelected = {},
+        onTare = {}
     )
 }

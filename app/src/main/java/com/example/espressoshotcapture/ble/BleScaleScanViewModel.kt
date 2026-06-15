@@ -42,6 +42,10 @@ class BleScaleScanViewModel(
         gattClient.connect(candidate)
     }
 
+    fun sendTare() {
+        gattClient.sendTare()
+    }
+
     override fun onCleared() {
         scanner.stopScan()
         gattClient.disconnect()

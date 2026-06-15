@@ -148,6 +148,73 @@ class CaptureViewModelTest {
     }
 
     @Test
+    fun realScaleDisconnectClearsReadinessAndDisablesStartCapture() = runTest(testDispatcher) {
+        val selectedCandidate = MutableStateFlow(expectedScaleCandidate())
+        val realScaleClient = TestScaleClient()
+        viewModel = CaptureViewModel(
+            shotRepository = ShotRepository(dao),
+            scaleClient = scaleClient,
+            selectedDecentScaleCandidate = selectedCandidate,
+            createDecentScaleClient = { realScaleClient },
+            saveDispatcher = testDispatcher,
+            currentTimeMillis = { 123_456L },
+            savedConfirmationDelayMs = 1_000L
+        )
+        runCurrent()
+
+        viewModel.selectDecentScaleSource()
+        runCurrent()
+        realScaleClient.emitReading(ScaleReading(timestampMillis = 0L, weightGrams = 0.0))
+        runCurrent()
+
+        assertTrue(viewModel.uiState.value.isPrimaryActionEnabled)
+
+        realScaleClient.emitConnectionState(ScaleConnectionState.Disconnected)
+        runCurrent()
+
+        assertEquals("Scale: Not connected", viewModel.uiState.value.scaleConnectionLabel)
+        assertEquals(
+            "Capture source: Decent Scale/real not connected",
+            viewModel.uiState.value.captureSourceStatusLabel
+        )
+        assertFalse(viewModel.uiState.value.isPrimaryActionEnabled)
+    }
+
+    @Test
+    fun staleRealScaleReadingClearsReadinessAndDisablesStartCapture() = runTest(testDispatcher) {
+        val selectedCandidate = MutableStateFlow(expectedScaleCandidate())
+        val realScaleClient = TestScaleClient()
+        viewModel = CaptureViewModel(
+            shotRepository = ShotRepository(dao),
+            scaleClient = scaleClient,
+            selectedDecentScaleCandidate = selectedCandidate,
+            createDecentScaleClient = { realScaleClient },
+            saveDispatcher = testDispatcher,
+            currentTimeMillis = { 123_456L },
+            savedConfirmationDelayMs = 1_000L
+        )
+        runCurrent()
+
+        viewModel.selectDecentScaleSource()
+        runCurrent()
+        realScaleClient.emitReading(ScaleReading(timestampMillis = 0L, weightGrams = 0.0))
+        runCurrent()
+
+        assertEquals("Scale: Connected", viewModel.uiState.value.scaleConnectionLabel)
+        assertTrue(viewModel.uiState.value.isPrimaryActionEnabled)
+
+        advanceTimeBy(1_500L)
+        runCurrent()
+
+        assertEquals("Scale: Not connected", viewModel.uiState.value.scaleConnectionLabel)
+        assertEquals(
+            "Capture source: Decent Scale/real not connected",
+            viewModel.uiState.value.captureSourceStatusLabel
+        )
+        assertFalse(viewModel.uiState.value.isPrimaryActionEnabled)
+    }
+
+    @Test
     fun targetStateCalculatesRatioFromUpdatedValues() = runTest(testDispatcher) {
         viewModel.updateTarget(doseGrams = 20.0, targetYieldGrams = 50.0)
 

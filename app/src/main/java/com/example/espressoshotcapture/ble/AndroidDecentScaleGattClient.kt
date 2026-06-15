@@ -29,13 +29,14 @@ class AndroidDecentScaleGattClient(
     override val state: StateFlow<DecentScaleGattState> = _state.asStateFlow()
     private var bluetoothGatt: BluetoothGatt? = null
     private var notifyCharacteristic: BluetoothGattCharacteristic? = null
+    private var writeCharacteristic: BluetoothGattCharacteristic? = null
 
     private val callback = object : BluetoothGattCallback() {
         override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
             if (status != BluetoothGatt.GATT_SUCCESS) {
                 closeGatt(gatt)
-                updateConnectionState(
-                    DecentScaleGattConnectionState.Error("Connection failed: $status")
+                _state.value = DecentScaleGattState(
+                    connectionState = DecentScaleGattConnectionState.Error("Connection failed: $status")
                 )
                 return
             }
@@ -69,17 +70,18 @@ class AndroidDecentScaleGattClient(
 
             val service = gatt.getService(DECENT_SCALE_SERVICE_UUID)
             val characteristic = service?.getCharacteristic(DECENT_SCALE_NOTIFY_UUID)
-            val writeCharacteristic = service?.getCharacteristic(DECENT_SCALE_WRITE_UUID)
+            val discoveredWriteCharacteristic = service?.getCharacteristic(DECENT_SCALE_WRITE_UUID)
             _state.value = _state.value.copy(
                 notifyCharacteristicFound = characteristic != null,
-                writeCharacteristicFound = writeCharacteristic != null
+                writeCharacteristicFound = discoveredWriteCharacteristic != null
             )
             if (service == null || characteristic == null) {
-                updateConnectionState(DecentScaleGattConnectionState.ServiceDiscoveryFailed)
+                failAndClose(gatt, DecentScaleGattConnectionState.ServiceDiscoveryFailed)
                 return
             }
 
             notifyCharacteristic = characteristic
+            writeCharacteristic = discoveredWriteCharacteristic
             enableWeightNotifications(gatt, characteristic)
         }
 
@@ -92,8 +94,23 @@ class AndroidDecentScaleGattClient(
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 updateConnectionState(DecentScaleGattConnectionState.ReceivingReadings)
             } else {
-                updateConnectionState(DecentScaleGattConnectionState.NotificationSetupFailed)
+                failAndClose(gatt, DecentScaleGattConnectionState.NotificationSetupFailed)
             }
+        }
+
+        override fun onCharacteristicWrite(
+            gatt: BluetoothGatt,
+            characteristic: BluetoothGattCharacteristic,
+            status: Int
+        ) {
+            if (characteristic.uuid != DECENT_SCALE_WRITE_UUID) return
+            _state.value = _state.value.copy(
+                tareStatus = if (status == BluetoothGatt.GATT_SUCCESS) {
+                    DecentScaleTareStatus.Sent
+                } else {
+                    DecentScaleTareStatus.Failed("Write failed: $status")
+                }
+            )
         }
 
         override fun onCharacteristicChanged(
@@ -162,6 +179,7 @@ class AndroidDecentScaleGattClient(
         val gatt = bluetoothGatt ?: return
         bluetoothGatt = null
         notifyCharacteristic = null
+        writeCharacteristic = null
         try {
             if (hasConnectPermission()) {
                 gatt.disconnect()
@@ -187,7 +205,7 @@ class AndroidDecentScaleGattClient(
 
         try {
             if (!gatt.setCharacteristicNotification(characteristic, true)) {
-                updateConnectionState(DecentScaleGattConnectionState.NotificationSetupFailed)
+                failAndClose(gatt, DecentScaleGattConnectionState.NotificationSetupFailed)
                 return
             }
 
@@ -197,14 +215,14 @@ class AndroidDecentScaleGattClient(
                 (characteristic.properties and BluetoothGattCharacteristic.PROPERTY_INDICATE) != 0 ->
                     BluetoothGattDescriptor.ENABLE_INDICATION_VALUE
                 else -> {
-                    updateConnectionState(DecentScaleGattConnectionState.NotificationSetupFailed)
+                    failAndClose(gatt, DecentScaleGattConnectionState.NotificationSetupFailed)
                     return
                 }
             }
 
             val descriptor = characteristic.getDescriptor(CLIENT_CHARACTERISTIC_CONFIG_UUID)
             if (descriptor == null) {
-                updateConnectionState(DecentScaleGattConnectionState.NotificationSetupFailed)
+                failAndClose(gatt, DecentScaleGattConnectionState.NotificationSetupFailed)
                 return
             }
 
@@ -219,11 +237,54 @@ class AndroidDecentScaleGattClient(
             }
 
             if (!writeStarted) {
-                updateConnectionState(DecentScaleGattConnectionState.NotificationSetupFailed)
+                failAndClose(gatt, DecentScaleGattConnectionState.NotificationSetupFailed)
             }
         } catch (exception: SecurityException) {
             updateConnectionState(
                 DecentScaleGattConnectionState.Error("Bluetooth connect permission missing")
+            )
+        }
+    }
+
+    override fun sendTare() {
+        val gatt = bluetoothGatt
+        val characteristic = writeCharacteristic
+        if (gatt == null || characteristic == null) {
+            _state.value = _state.value.copy(
+                tareStatus = DecentScaleTareStatus.Failed("Write characteristic unavailable")
+            )
+            return
+        }
+        if (!hasConnectPermission()) {
+            _state.value = _state.value.copy(
+                tareStatus = DecentScaleTareStatus.Failed("Bluetooth connect permission missing")
+            )
+            return
+        }
+
+        _state.value = _state.value.copy(tareStatus = DecentScaleTareStatus.Sending)
+        try {
+            characteristic.writeType = BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+            val command = DecentScaleCommandPackets.tare()
+            val writeStarted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                gatt.writeCharacteristic(
+                    characteristic,
+                    command,
+                    BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+                ) == BluetoothStatusCodes.SUCCESS
+            } else {
+                characteristic.value = command
+                gatt.writeCharacteristic(characteristic)
+            }
+
+            if (!writeStarted) {
+                _state.value = _state.value.copy(
+                    tareStatus = DecentScaleTareStatus.Failed("Write could not start")
+                )
+            }
+        } catch (exception: SecurityException) {
+            _state.value = _state.value.copy(
+                tareStatus = DecentScaleTareStatus.Failed("Bluetooth connect permission missing")
             )
         }
     }
@@ -254,11 +315,20 @@ class AndroidDecentScaleGattClient(
         _state.value = _state.value.copy(connectionState = connectionState)
     }
 
+    private fun failAndClose(
+        gatt: BluetoothGatt,
+        connectionState: DecentScaleGattConnectionState
+    ) {
+        closeGatt(gatt)
+        _state.value = DecentScaleGattState(connectionState = connectionState)
+    }
+
     private fun closeGatt(gatt: BluetoothGatt) {
         if (bluetoothGatt === gatt) {
             bluetoothGatt = null
         }
         notifyCharacteristic = null
+        writeCharacteristic = null
         gatt.close()
     }
 

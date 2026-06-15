@@ -12,6 +12,13 @@ sealed class DecentScaleGattConnectionState {
     data class Error(val message: String) : DecentScaleGattConnectionState()
 }
 
+sealed class DecentScaleTareStatus {
+    data object Idle : DecentScaleTareStatus()
+    data object Sending : DecentScaleTareStatus()
+    data object Sent : DecentScaleTareStatus()
+    data class Failed(val message: String) : DecentScaleTareStatus()
+}
+
 data class DecentScaleGattState(
     val connectionState: DecentScaleGattConnectionState = DecentScaleGattConnectionState.Disconnected,
     val notifyCharacteristicFound: Boolean? = null,
@@ -19,7 +26,8 @@ data class DecentScaleGattState(
     val latestRawPacketHex: String? = null,
     val latestWeightGrams: Double? = null,
     val latestReadingTimestampMs: Long? = null,
-    val latestParserError: String? = null
+    val latestParserError: String? = null,
+    val tareStatus: DecentScaleTareStatus = DecentScaleTareStatus.Idle
 ) {
     val connectionLabel: String
         get() = when (val state = connectionState) {
@@ -53,12 +61,29 @@ data class DecentScaleGattState(
     val writeCharacteristicLabel: String
         get() = "Write characteristic 36f5: ${writeCharacteristicFound.toDiscoveryLabel()}"
 
+    val tareStatusLabel: String
+        get() = when (val status = tareStatus) {
+            DecentScaleTareStatus.Idle -> "Tare: idle"
+            DecentScaleTareStatus.Sending -> "Tare: sending"
+            DecentScaleTareStatus.Sent -> "Tare: sent"
+            is DecentScaleTareStatus.Failed -> "Tare: failed - ${status.message}"
+        }
+
+    val canSendTare: Boolean
+        get() = writeCharacteristicFound == true &&
+            connectionState.isWritableConnection() &&
+            tareStatus != DecentScaleTareStatus.Sending
+
     private fun Boolean?.toDiscoveryLabel(): String =
         when (this) {
             true -> "found"
             false -> "missing"
             null -> "unknown"
         }
+
+    private fun DecentScaleGattConnectionState.isWritableConnection(): Boolean =
+        this == DecentScaleGattConnectionState.Connected ||
+            this == DecentScaleGattConnectionState.ReceivingReadings
 }
 
 interface DecentScaleGattClient {
@@ -66,4 +91,5 @@ interface DecentScaleGattClient {
 
     fun connect(candidate: BleScaleScanCandidate)
     fun disconnect()
+    fun sendTare()
 }
