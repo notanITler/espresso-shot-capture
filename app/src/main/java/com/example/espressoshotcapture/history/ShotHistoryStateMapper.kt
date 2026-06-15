@@ -20,8 +20,12 @@ object ShotHistoryStateMapper {
                 id = id,
                 createdAtEpochMillis = createdAtEpochMillis,
                 json = json,
+                sourceLabel = summary.sourceLabel,
+                qualityLabel = summary.qualityLabel,
                 finalYieldLabel = summary.finalYieldLabel,
                 flowTimeLabel = summary.flowTimeLabel,
+                sampleCountLabel = summary.sampleCountLabel,
+                doseLabel = summary.doseLabel,
                 targetYieldLabel = summary.targetYieldLabel,
                 averageFlowLabel = summary.averageFlowLabel,
                 targetReachedLabel = summary.targetReachedLabel

@@ -41,7 +41,11 @@ class ShotHistoryScreenTest {
                     createdAtEpochMillis = 1_000L,
                     finalYieldLabel = "Yield: 36.8 g",
                     flowTimeLabel = "Flow time: 28 s",
-                    targetYieldLabel = "Target: 36.0 g"
+                    targetYieldLabel = "Target: 36.0 g",
+                    sourceLabel = "Source: Fake/demo",
+                    qualityLabel = "Quality: Complete",
+                    sampleCountLabel = "Samples: 3",
+                    doseLabel = "Dose: 18.0 g"
                 ),
                 ShotHistoryItem(id = "shot-2000", createdAtEpochMillis = 2_000L)
             )
@@ -49,7 +53,13 @@ class ShotHistoryScreenTest {
 
         composeTestRule.onNodeWithText("shot-1000").assertIsDisplayed()
         composeTestRule.onNodeWithText(
-            "Yield: 36.8 g  |  Flow time: 28 s  |  Target: 36.0 g"
+            "Source: Fake/demo  |  Quality: Complete"
+        ).assertIsDisplayed()
+        composeTestRule.onNodeWithText(
+            "Yield: 36.8 g  |  Flow time: 28 s  |  Samples: 3"
+        ).assertIsDisplayed()
+        composeTestRule.onNodeWithText(
+            "Dose: 18.0 g  |  Target: 36.0 g"
         ).assertIsDisplayed()
         composeTestRule.onNodeWithText("shot-2000").assertIsDisplayed()
     }
@@ -108,10 +118,14 @@ class ShotHistoryScreenTest {
                         id = item.id,
                         createdAtEpochMillis = item.createdAtEpochMillis,
                         json = json,
+                        sourceLabel = "Source: Decent Scale",
+                        qualityLabel = "Quality: Complete",
                         finalYieldLabel = "Yield: 36.8 g",
                         flowTimeLabel = "Flow time: 28 s",
                         targetYieldLabel = "Target: 36.0 g",
                         averageFlowLabel = "Average flow: 1.3 g/s",
+                        sampleCountLabel = "Samples: 4",
+                        doseLabel = "Dose: 18.0 g",
                         targetReachedLabel = "Target reached: yes"
                     )
                 }
@@ -121,13 +135,18 @@ class ShotHistoryScreenTest {
         composeTestRule.onNodeWithText("shot-2000").performClick()
 
         composeTestRule.onNodeWithText("Selected Shot Detail").assertIsDisplayed()
-        composeTestRule.onNodeWithText("id: shot-2000").assertIsDisplayed()
-        composeTestRule.onNodeWithText("createdAtEpochMillis: 2000").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Yield: 36.8 g").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Flow time: 28 s").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Average flow: 1.3 g/s").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Target: 36.0 g").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Target reached: yes").assertIsDisplayed()
+        composeTestRule.onAllNodesWithTag(ShotHistoryScreenTestTags.SELECTED_DETAIL).assertCountEquals(1)
+        composeTestRule.onAllNodesWithText("id: shot-2000").assertCountEquals(1)
+        composeTestRule.onAllNodesWithText("createdAtEpochMillis: 2000").assertCountEquals(1)
+        composeTestRule.onAllNodesWithText("Source: Decent Scale").assertCountEquals(1)
+        composeTestRule.onAllNodesWithText("Quality: Complete").assertCountEquals(1)
+        composeTestRule.onAllNodesWithText("Yield: 36.8 g").assertCountEquals(1)
+        composeTestRule.onAllNodesWithText("Flow time: 28 s").assertCountEquals(1)
+        composeTestRule.onAllNodesWithText("Average flow: 1.3 g/s").assertCountEquals(1)
+        composeTestRule.onAllNodesWithText("Samples: 4").assertCountEquals(1)
+        composeTestRule.onAllNodesWithText("Dose: 18.0 g").assertCountEquals(1)
+        composeTestRule.onAllNodesWithText("Target: 36.0 g").assertCountEquals(1)
+        composeTestRule.onAllNodesWithText("Target reached: yes").assertCountEquals(1)
         composeTestRule.onAllNodesWithText("Raw JSON / debug detail").assertCountEquals(1)
         composeTestRule.onAllNodesWithTag(ShotHistoryScreenTestTags.RAW_JSON).assertCountEquals(1)
         composeTestRule.onAllNodesWithText(json).assertCountEquals(1)

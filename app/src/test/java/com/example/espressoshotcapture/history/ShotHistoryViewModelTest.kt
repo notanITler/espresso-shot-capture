@@ -57,9 +57,21 @@ class ShotHistoryViewModelTest {
         assertEquals(
             ShotHistoryUiState(
                 items = listOf(
-                    ShotHistoryItem(id = "shot-3", createdAtEpochMillis = 3_000L),
-                    ShotHistoryItem(id = "shot-2", createdAtEpochMillis = 2_000L),
-                    ShotHistoryItem(id = "shot-1", createdAtEpochMillis = 1_000L)
+                    ShotHistoryItem(
+                        id = "shot-3",
+                        createdAtEpochMillis = 3_000L,
+                        qualityLabel = "Quality: Missing target"
+                    ),
+                    ShotHistoryItem(
+                        id = "shot-2",
+                        createdAtEpochMillis = 2_000L,
+                        qualityLabel = "Quality: Missing target"
+                    ),
+                    ShotHistoryItem(
+                        id = "shot-1",
+                        createdAtEpochMillis = 1_000L,
+                        qualityLabel = "Quality: Missing target"
+                    )
                 )
             ),
             uiState
@@ -87,7 +99,8 @@ class ShotHistoryViewModelTest {
             ShotHistoryDetail(
                 id = "shot-2",
                 createdAtEpochMillis = 2_000L,
-                json = json
+                json = json,
+                qualityLabel = "Quality: Missing target"
             ),
             uiState.selectedShotDetail
         )

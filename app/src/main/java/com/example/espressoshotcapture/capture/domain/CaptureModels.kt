@@ -26,6 +26,12 @@ enum class SampleSource {
     SCALE
 }
 
+enum class ShotScaleSource {
+    UNKNOWN,
+    FAKE_DEMO,
+    DECENT_SCALE
+}
+
 data class WeightSample(
     val timestampMs: Long,
     val weightG: Double,
@@ -70,6 +76,10 @@ data class ShotResult(
     val sampleCount: Int
 )
 
+data class ShotMetadata(
+    val scaleSource: ShotScaleSource = ShotScaleSource.UNKNOWN
+)
+
 data class ShotDraft(
     val id: String,
     val createdAtEpochMs: Long,
@@ -78,6 +88,6 @@ data class ShotDraft(
     val result: ShotResult,
     val samples: List<CapturedSample>,
     val status: ShotStatus,
-    val notes: String?
+    val notes: String?,
+    val metadata: ShotMetadata = ShotMetadata()
 )
-

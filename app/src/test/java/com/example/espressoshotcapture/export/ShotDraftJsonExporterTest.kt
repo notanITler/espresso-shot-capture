@@ -4,7 +4,9 @@ import com.example.espressoshotcapture.capture.domain.CaptureTarget
 import com.example.espressoshotcapture.capture.domain.CapturedSample
 import com.example.espressoshotcapture.capture.domain.SampleSource
 import com.example.espressoshotcapture.capture.domain.ShotDraft
+import com.example.espressoshotcapture.capture.domain.ShotMetadata
 import com.example.espressoshotcapture.capture.domain.ShotResult
+import com.example.espressoshotcapture.capture.domain.ShotScaleSource
 import com.example.espressoshotcapture.capture.domain.ShotSource
 import com.example.espressoshotcapture.capture.domain.ShotStatus
 import com.example.espressoshotcapture.capture.domain.ShotTiming
@@ -42,6 +44,13 @@ class ShotDraftJsonExporterTest {
         assertEquals(1000L, shot["createdAtEpochMs"]?.jsonPrimitive?.long)
         assertEquals("COMPLETED", shot["status"]?.jsonPrimitive?.content)
         assertEquals("Balanced and sweet", shot["notes"]?.jsonPrimitive?.content)
+    }
+
+    @Test
+    fun exportsMetadataInformation() {
+        val metadata = exportShot()["metadata"]!!.jsonObject
+
+        assertEquals("FAKE_DEMO", metadata["scaleSource"]?.jsonPrimitive?.content)
     }
 
     @Test
@@ -180,7 +189,8 @@ class ShotDraftJsonExporterTest {
                 )
             ),
             status = ShotStatus.COMPLETED,
-            notes = "Balanced and sweet"
+            notes = "Balanced and sweet",
+            metadata = ShotMetadata(scaleSource = ShotScaleSource.FAKE_DEMO)
         )
 
     private fun nullableDraft(): ShotDraft =

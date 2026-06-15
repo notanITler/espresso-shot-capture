@@ -17,6 +17,8 @@ import com.example.espressoshotcapture.capture.domain.ScaleClient
 import com.example.espressoshotcapture.capture.domain.ScaleConnectionState
 import com.example.espressoshotcapture.capture.domain.ScaleReading
 import com.example.espressoshotcapture.capture.domain.ScaleReadingMapper
+import com.example.espressoshotcapture.capture.domain.ShotMetadata
+import com.example.espressoshotcapture.capture.domain.ShotScaleSource
 import com.example.espressoshotcapture.capture.domain.WeightSample
 import com.example.espressoshotcapture.capture.engine.ShotCaptureEngine
 import com.example.espressoshotcapture.repository.ShotRepository
@@ -54,6 +56,7 @@ class CaptureViewModel(
     private var captureSessionStartedAtEpochMs: Long? = null
     private var firstScaleReadingTimestampMs: Long? = null
     private var lastCaptureSessionStartedAtEpochMs: Long? = null
+    private var activeShotScaleSource: ShotScaleSource = ShotScaleSource.FAKE_DEMO
     private var activeScaleClient: ScaleClient = scaleClient
     private var latestDecentScaleCandidate: BleScaleScanCandidate? = selectedDecentScaleCandidate.value
     private var activeScaleConnectionState: ScaleConnectionState = ScaleConnectionState.Disconnected
@@ -133,6 +136,7 @@ class CaptureViewModel(
         recordingStartTimestampMs = null
         firstScaleReadingTimestampMs = null
         captureSessionStartedAtEpochMs = nextCaptureSessionStartedAtMs()
+        activeShotScaleSource = selectedScaleSource.toShotScaleSource()
         shotCaptureEngine = createArmedShotCaptureEngine(activeCaptureTarget)
         _uiState.value = CaptureUiStateMapper.recording(
             scaleConnectionLabel = _uiState.value.scaleConnectionLabel,
@@ -151,7 +155,9 @@ class CaptureViewModel(
             val shotDraft = shotCaptureEngine.completedShotDraft
                 ?: shotCaptureEngine.stopManually(fallbackCreatedAtEpochMs = fallbackCreatedAtMs)
                 ?: error("Unable to create shot draft from capture engine")
-            shotRepository.saveShotDraft(shotDraft)
+            shotRepository.saveShotDraft(
+                shotDraft.copy(metadata = ShotMetadata(scaleSource = activeShotScaleSource))
+            )
             _uiState.value = CaptureUiStateMapper.savedConfirmation(
                 scaleConnectionLabel = _uiState.value.scaleConnectionLabel,
                 scaleModeLabel = scaleModeLabelForSource(),
@@ -369,6 +375,12 @@ class CaptureViewModel(
             MvpShotTarget.TARGET_REACHED_LABEL
         } else {
             MvpShotTarget.TARGET_NOT_REACHED_LABEL
+        }
+
+    private fun CaptureScaleSource.toShotScaleSource(): ShotScaleSource =
+        when (this) {
+            CaptureScaleSource.FAKE -> ShotScaleSource.FAKE_DEMO
+            CaptureScaleSource.DECENT -> ShotScaleSource.DECENT_SCALE
         }
 
     private fun nextCaptureSessionStartedAtMs(): Long {

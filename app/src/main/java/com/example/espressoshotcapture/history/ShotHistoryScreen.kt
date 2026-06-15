@@ -138,7 +138,13 @@ private fun ShotHistoryRow(
     ) {
         BasicText(text = item.id)
         BasicText(
-            text = "${item.finalYieldLabel}  |  ${item.flowTimeLabel}  |  ${item.targetYieldLabel}"
+            text = "${item.sourceLabel}  |  ${item.qualityLabel}"
+        )
+        BasicText(
+            text = "${item.finalYieldLabel}  |  ${item.flowTimeLabel}  |  ${item.sampleCountLabel}"
+        )
+        BasicText(
+            text = "${item.doseLabel}  |  ${item.targetYieldLabel}"
         )
     }
 }
@@ -155,9 +161,13 @@ private fun ShotHistoryDetailView(
     ) {
         BasicText(text = "id: ${detail.id}")
         BasicText(text = "createdAtEpochMillis: ${detail.createdAtEpochMillis}")
+        BasicText(text = detail.sourceLabel)
+        BasicText(text = detail.qualityLabel)
         BasicText(text = detail.finalYieldLabel)
         BasicText(text = detail.flowTimeLabel)
         BasicText(text = detail.averageFlowLabel)
+        BasicText(text = detail.sampleCountLabel)
+        BasicText(text = detail.doseLabel)
         BasicText(text = detail.targetYieldLabel)
         BasicText(text = detail.targetReachedLabel)
         BasicText(
@@ -203,24 +213,36 @@ private fun PopulatedShotHistoryScreenPreview() {
                     createdAtEpochMillis = 1_000L,
                     finalYieldLabel = "Yield: 36.8 g",
                     flowTimeLabel = "Flow time: 28 s",
-                    targetYieldLabel = "Target: 36.0 g"
+                    targetYieldLabel = "Target: 36.0 g",
+                    sourceLabel = "Source: Fake/demo",
+                    qualityLabel = "Quality: Complete",
+                    sampleCountLabel = "Samples: 3",
+                    doseLabel = "Dose: 18.0 g"
                 ),
                 ShotHistoryItem(
                     id = "shot-2000",
                     createdAtEpochMillis = 2_000L,
                     finalYieldLabel = "Yield: 37.2 g",
                     flowTimeLabel = "Flow time: 29 s",
-                    targetYieldLabel = "Target: 36.0 g"
+                    targetYieldLabel = "Target: 36.0 g",
+                    sourceLabel = "Source: Decent Scale",
+                    qualityLabel = "Quality: Complete",
+                    sampleCountLabel = "Samples: 4",
+                    doseLabel = "Dose: 18.0 g"
                 )
             ),
             selectedShotDetail = ShotHistoryDetail(
                 id = "shot-2000",
                 createdAtEpochMillis = 2_000L,
                 json = """{"schemaVersion":1,"shot":{"id":"shot-2000"}}""",
+                sourceLabel = "Source: Decent Scale",
+                qualityLabel = "Quality: Complete",
                 finalYieldLabel = "Yield: 37.2 g",
                 flowTimeLabel = "Flow time: 29 s",
                 targetYieldLabel = "Target: 36.0 g",
                 averageFlowLabel = "Average flow: --",
+                sampleCountLabel = "Samples: 4",
+                doseLabel = "Dose: 18.0 g",
                 targetReachedLabel = "Target reached: yes"
             )
         )

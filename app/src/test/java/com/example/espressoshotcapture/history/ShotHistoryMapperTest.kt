@@ -29,10 +29,11 @@ class ShotHistoryMapperTest {
                 {
                   "schemaVersion": 1,
                   "shot": {
-                    "target": { "targetYieldG": 36.0 },
+                    "metadata": { "scaleSource": "FAKE_DEMO" },
+                    "target": { "doseG": 18.0, "targetYieldG": 36.0 },
                     "timing": { "flowTimeMs": 28000 },
-                    "result": { "actualYieldG": 36.8 },
-                    "samples": []
+                    "result": { "actualYieldG": 36.8, "sampleCount": 3 },
+                    "samples": [{}, {}, {}]
                   }
                 }
             """.trimIndent(),
@@ -43,8 +44,12 @@ class ShotHistoryMapperTest {
             ShotHistoryItem(
                 id = "shot-1",
                 createdAtEpochMillis = 1_000L,
+                sourceLabel = "Source: Fake/demo",
+                qualityLabel = "Quality: Complete",
                 finalYieldLabel = "Yield: 36.8 g",
                 flowTimeLabel = "Flow time: 28 s",
+                sampleCountLabel = "Samples: 3",
+                doseLabel = "Dose: 18.0 g",
                 targetYieldLabel = "Target: 36.0 g"
             ),
             ShotHistoryMapper.fromEntity(entity)
@@ -58,26 +63,88 @@ class ShotHistoryMapperTest {
                 {
                   "schemaVersion": 1,
                   "shot": {
-                    "target": { "targetYieldG": 36.0 },
+                    "metadata": { "scaleSource": "DECENT_SCALE" },
+                    "target": { "doseG": 18.0, "targetYieldG": 36.0 },
                     "timing": {
                       "flowTimeMs": 28000,
                       "targetReachedAtMs": 24000
                     },
                     "result": {
                       "actualYieldG": 37.2,
-                      "averageFlowGPerS": 1.28
+                      "averageFlowGPerS": 1.28,
+                      "sampleCount": 4
                     },
+                    "samples": [{}, {}, {}, {}]
+                  }
+                }
+            """.trimIndent()
+        )
+
+        assertEquals("Source: Decent Scale", summary.sourceLabel)
+        assertEquals("Quality: Complete", summary.qualityLabel)
+        assertEquals("Yield: 37.2 g", summary.finalYieldLabel)
+        assertEquals("Flow time: 28 s", summary.flowTimeLabel)
+        assertEquals("Average flow: 1.3 g/s", summary.averageFlowLabel)
+        assertEquals("Samples: 4", summary.sampleCountLabel)
+        assertEquals("Dose: 18.0 g", summary.doseLabel)
+        assertEquals("Target: 36.0 g", summary.targetYieldLabel)
+        assertEquals("Target reached: yes", summary.targetReachedLabel)
+    }
+
+    @Test
+    fun noSamplesProducesQualityLabel() {
+        val summary = ShotHistoryMapper.summaryFromJson(
+            """
+                {
+                  "schemaVersion": 1,
+                  "shot": {
+                    "target": { "doseG": 18.0, "targetYieldG": 36.0 },
+                    "timing": { "flowTimeMs": 28000 },
+                    "result": { "sampleCount": 0 },
                     "samples": []
                   }
                 }
             """.trimIndent()
         )
 
-        assertEquals("Yield: 37.2 g", summary.finalYieldLabel)
-        assertEquals("Flow time: 28 s", summary.flowTimeLabel)
-        assertEquals("Average flow: 1.3 g/s", summary.averageFlowLabel)
-        assertEquals("Target: 36.0 g", summary.targetYieldLabel)
-        assertEquals("Target reached: yes", summary.targetReachedLabel)
+        assertEquals("Quality: No samples", summary.qualityLabel)
+    }
+
+    @Test
+    fun zeroFlowTimeProducesQualityLabel() {
+        val summary = ShotHistoryMapper.summaryFromJson(
+            """
+                {
+                  "schemaVersion": 1,
+                  "shot": {
+                    "target": { "doseG": 18.0, "targetYieldG": 36.0 },
+                    "timing": { "flowTimeMs": 0 },
+                    "result": { "sampleCount": 2 },
+                    "samples": [{}, {}]
+                  }
+                }
+            """.trimIndent()
+        )
+
+        assertEquals("Quality: Zero flow time", summary.qualityLabel)
+    }
+
+    @Test
+    fun missingTargetProducesQualityLabel() {
+        val summary = ShotHistoryMapper.summaryFromJson(
+            """
+                {
+                  "schemaVersion": 1,
+                  "shot": {
+                    "timing": { "flowTimeMs": 28000 },
+                    "result": { "sampleCount": 2 },
+                    "samples": [{}, {}]
+                  }
+                }
+            """.trimIndent()
+        )
+
+        assertEquals("Quality: Missing target", summary.qualityLabel)
     }
 
     @Test
@@ -184,6 +251,7 @@ class ShotHistoryMapperTest {
                 createdAtEpochMillis = 1_000L,
                 finalYieldLabel = "Yield: --",
                 flowTimeLabel = "Flow time: --",
+                qualityLabel = "Quality: Missing target",
                 targetYieldLabel = "Target: --"
             ),
             ShotHistoryMapper.fromEntity(entity)

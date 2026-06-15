@@ -3,6 +3,7 @@ package com.example.espressoshotcapture.export
 import com.example.espressoshotcapture.capture.domain.CaptureTarget
 import com.example.espressoshotcapture.capture.domain.CapturedSample
 import com.example.espressoshotcapture.capture.domain.ShotDraft
+import com.example.espressoshotcapture.capture.domain.ShotMetadata
 import com.example.espressoshotcapture.capture.domain.ShotResult
 import com.example.espressoshotcapture.capture.domain.ShotTiming
 import kotlinx.serialization.json.Json
@@ -28,6 +29,7 @@ object ShotDraftJsonExporter {
         buildJsonObject {
             put("id", id)
             put("createdAtEpochMs", createdAtEpochMs)
+            put("metadata", metadata.toJson())
             put("target", target.toJson())
             put("timing", timing.toJson())
             put("result", result.toJson())
@@ -41,6 +43,11 @@ object ShotDraftJsonExporter {
             )
             put("status", status.name)
             putNullable("notes", notes)
+        }
+
+    private fun ShotMetadata.toJson(): JsonObject =
+        buildJsonObject {
+            put("scaleSource", scaleSource.name)
         }
 
     private fun CaptureTarget.toJson(): JsonObject =

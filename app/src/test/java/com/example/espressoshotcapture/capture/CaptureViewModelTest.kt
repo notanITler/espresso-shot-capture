@@ -455,6 +455,7 @@ class CaptureViewModelTest {
         assertTrue(savedShot.json.contains(""""schemaVersion":1"""))
         assertTrue(savedShot.json.contains(""""id":"shot-123456""""))
         assertTrue(savedShot.json.contains(""""status":"MANUAL_STOPPED""""))
+        assertTrue(savedShot.json.contains(""""scaleSource":"FAKE_DEMO""""))
     }
 
     @Test
@@ -508,6 +509,7 @@ class CaptureViewModelTest {
         assertTrue(savedShot.json.contains(""""weightGRaw":0.8"""))
         assertTrue(savedShot.json.contains(""""doseG":18.0"""))
         assertTrue(savedShot.json.contains(""""targetYieldG":36.0"""))
+        assertTrue(savedShot.json.contains(""""scaleSource":"DECENT_SCALE""""))
     }
 
     @Test

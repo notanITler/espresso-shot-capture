@@ -2,7 +2,9 @@ package com.example.espressoshotcapture.capture
 
 import com.example.espressoshotcapture.capture.domain.CapturedSample
 import com.example.espressoshotcapture.capture.domain.ShotDraft
+import com.example.espressoshotcapture.capture.domain.ShotMetadata
 import com.example.espressoshotcapture.capture.domain.ShotResult
+import com.example.espressoshotcapture.capture.domain.ShotScaleSource
 import com.example.espressoshotcapture.capture.domain.ShotStatus
 import com.example.espressoshotcapture.capture.domain.ShotTiming
 import com.example.espressoshotcapture.capture.domain.StartMode
@@ -61,7 +63,8 @@ object FakeCaptureShotDraftFactory {
             ),
             samples = samples,
             status = ShotStatus.MANUAL_STOPPED,
-            notes = "Manual fake capture"
+            notes = "Manual fake capture",
+            metadata = ShotMetadata(scaleSource = ShotScaleSource.FAKE_DEMO)
         )
     }
 }
