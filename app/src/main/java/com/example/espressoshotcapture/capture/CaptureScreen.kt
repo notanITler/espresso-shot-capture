@@ -34,10 +34,18 @@ fun CaptureScreen(
     onFakeScaleSelected: () -> Unit = {},
     onDecentScaleSelected: () -> Unit = {},
     onPrimaryAction: () -> Unit = {},
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isTareEnabled: Boolean = false,
+    tareStatusLabel: String? = null,
+    onTare: () -> Unit = {}
 ) {
     val isPrimaryActionEnabled = uiState.isPrimaryActionEnabled &&
         (uiState.status != CaptureStatus.READY || targetState.isValid)
+    val canTareFromCapture = isTareEnabled &&
+        uiState.selectedScaleSource == CaptureScaleSource.DECENT
+    val actionStatusLabel = targetState.validationMessage
+        ?: uiState.captureSourceMessage
+        ?: tareStatusLabel.takeIf { uiState.selectedScaleSource == CaptureScaleSource.DECENT }
 
     Column(
         modifier = modifier
@@ -213,37 +221,14 @@ fun CaptureScreen(
         )
         Spacer(modifier = Modifier.height(14.dp))
 
-        BasicText(
-            text = "Actions",
-            style = captureSectionLabelStyle()
+        StableActionArea(
+            primaryActionLabel = uiState.primaryActionLabel,
+            isPrimaryActionEnabled = isPrimaryActionEnabled,
+            isTareEnabled = canTareFromCapture,
+            statusLabel = actionStatusLabel,
+            onPrimaryAction = onPrimaryAction,
+            onTare = onTare
         )
-        Spacer(modifier = Modifier.height(8.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            ActionPill(
-                text = "Tare",
-                enabled = false,
-                modifier = Modifier
-                    .weight(1f)
-                    .testTag(CaptureScreenTestTags.TARE_ACTION)
-            )
-            ActionPill(
-                text = uiState.primaryActionLabel,
-                enabled = isPrimaryActionEnabled,
-                modifier = if (isPrimaryActionEnabled) {
-                    Modifier
-                        .weight(2f)
-                        .testTag(CaptureScreenTestTags.PRIMARY_ACTION)
-                        .clickable(onClick = onPrimaryAction)
-                } else {
-                    Modifier
-                        .weight(2f)
-                        .testTag(CaptureScreenTestTags.PRIMARY_ACTION)
-                }
-            )
-        }
     }
 }
 
@@ -382,6 +367,63 @@ private fun ActionPill(
     )
 }
 
+@Composable
+private fun StableActionArea(
+    primaryActionLabel: String,
+    isPrimaryActionEnabled: Boolean,
+    isTareEnabled: Boolean,
+    statusLabel: String?,
+    onPrimaryAction: () -> Unit,
+    onTare: () -> Unit
+) {
+    BasicText(
+        text = "Actions",
+        style = captureSectionLabelStyle()
+    )
+    Spacer(modifier = Modifier.height(8.dp))
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        ActionPill(
+            text = "Tare",
+            enabled = isTareEnabled,
+            modifier = if (isTareEnabled) {
+                Modifier
+                    .weight(1f)
+                    .testTag(CaptureScreenTestTags.TARE_ACTION)
+                    .clickable(onClick = onTare)
+            } else {
+                Modifier
+                    .weight(1f)
+                    .testTag(CaptureScreenTestTags.TARE_ACTION)
+            }
+        )
+        ActionPill(
+            text = primaryActionLabel,
+            enabled = isPrimaryActionEnabled,
+            modifier = if (isPrimaryActionEnabled) {
+                Modifier
+                    .weight(2f)
+                    .testTag(CaptureScreenTestTags.PRIMARY_ACTION)
+                    .clickable(onClick = onPrimaryAction)
+            } else {
+                Modifier
+                    .weight(2f)
+                    .testTag(CaptureScreenTestTags.PRIMARY_ACTION)
+            }
+        )
+    }
+    BasicText(
+        text = statusLabel ?: " ",
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 6.dp)
+            .testTag(CaptureScreenTestTags.ACTION_STATUS),
+        style = captureMutedStyle()
+    )
+}
+
 private fun captureSectionLabelStyle(): TextStyle =
     TextStyle(
         color = Color(0xFF97A2AD),
@@ -419,6 +461,7 @@ object CaptureScreenTestTags {
     const val VALIDATION_MESSAGE = "target-validation-message"
     const val TARE_ACTION = "tare-action"
     const val TARE_STATUS = "tare-status"
+    const val ACTION_STATUS = "capture-action-status"
     const val PRIMARY_ACTION = "primary-capture-action"
     const val STATUS = "capture-status"
     const val RECORDING_WEIGHT = "recording-weight"

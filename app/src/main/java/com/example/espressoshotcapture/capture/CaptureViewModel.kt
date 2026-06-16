@@ -480,17 +480,25 @@ fun CaptureRoute(
             createDecentScaleClient = application.appContainer::createDecentScaleClient
         )
     )
+    val gattClient = application.appContainer.decentScaleGattClient
+    val gattState by gattClient.state.collectAsState()
 
     CaptureRoute(
         viewModel = viewModel,
-        modifier = modifier
+        modifier = modifier,
+        isTareEnabled = gattState.canSendTare,
+        tareStatusLabel = gattState.tareStatusLabel,
+        onTare = gattClient::sendTare
     )
 }
 
 @Composable
 fun CaptureRoute(
     viewModel: CaptureViewModel,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isTareEnabled: Boolean = false,
+    tareStatusLabel: String? = null,
+    onTare: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val targetState by viewModel.targetState.collectAsState()
@@ -503,6 +511,9 @@ fun CaptureRoute(
         onFakeScaleSelected = viewModel::selectFakeScaleSource,
         onDecentScaleSelected = viewModel::selectDecentScaleSource,
         onPrimaryAction = viewModel::onPrimaryAction,
-        modifier = modifier
+        modifier = modifier,
+        isTareEnabled = isTareEnabled,
+        tareStatusLabel = tareStatusLabel,
+        onTare = onTare
     )
 }

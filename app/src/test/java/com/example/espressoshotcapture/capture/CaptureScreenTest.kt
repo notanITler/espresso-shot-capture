@@ -58,6 +58,10 @@ class CaptureScreenTest {
             .performScrollTo()
             .assertIsDisplayed()
             .assertTextContains("Ready")
+        composeTestRule.onNodeWithTag(CaptureScreenTestTags.TARE_ACTION)
+            .performScrollTo()
+            .assertIsDisplayed()
+            .assertTextContains("Tare")
         composeTestRule.onNodeWithTag(CaptureScreenTestTags.PRIMARY_ACTION)
             .performScrollTo()
             .assertIsDisplayed()
@@ -218,6 +222,52 @@ class CaptureScreenTest {
     }
 
     @Test
+    fun tareActionInvokesCallbackWhenEnabledForRealScale() {
+        var tared = false
+
+        setScrollableCaptureContent(
+            uiState = CaptureUiStateMapper.ready(
+                scaleConnectionLabel = "Scale: Connected",
+                selectedScaleSource = CaptureScaleSource.DECENT,
+                captureSourceStatusLabel = "Capture source: Decent Scale/real ready"
+            ),
+            isTareEnabled = true,
+            onTare = { tared = true }
+        )
+
+        composeTestRule.onNodeWithTag(CaptureScreenTestTags.TARE_ACTION)
+            .performScrollTo()
+            .assertHasClickAction()
+            .performClick()
+
+        composeTestRule.runOnIdle {
+            assertTrue(tared)
+        }
+    }
+
+    @Test
+    fun realScaleUnavailableShowsStableActionStatus() {
+        setScrollableCaptureContent(
+            uiState = CaptureUiStateMapper.ready(
+                scaleConnectionLabel = "Scale: Not connected",
+                selectedScaleSource = CaptureScaleSource.DECENT,
+                captureSourceStatusLabel = "Capture source: Decent Scale/real unavailable",
+                captureSourceMessage = "Connect Decent Scale in BLE debug first.",
+                isPrimaryActionEnabled = false
+            )
+        )
+
+        composeTestRule.onNodeWithTag(CaptureScreenTestTags.PRIMARY_ACTION)
+            .performScrollTo()
+            .assertIsDisplayed()
+            .assertTextContains("Start capture")
+        composeTestRule.onNodeWithTag(CaptureScreenTestTags.ACTION_STATUS)
+            .performScrollTo()
+            .assertIsDisplayed()
+            .assertTextContains("Connect Decent Scale in BLE debug first.")
+    }
+
+    @Test
     fun stopAndSaveIsShownInRecording() {
         setScrollableCaptureContent(uiState = CaptureUiStateMapper.recording())
 
@@ -294,14 +344,18 @@ class CaptureScreenTest {
     private fun setScrollableCaptureContent(
         uiState: CaptureUiState = CaptureUiStateMapper.initialDisconnectedReady(),
         targetState: CaptureTargetState = MvpShotTarget.defaultState(),
-        onPrimaryAction: () -> Unit = {}
+        onPrimaryAction: () -> Unit = {},
+        isTareEnabled: Boolean = false,
+        onTare: () -> Unit = {}
     ) {
         composeTestRule.activity.setContent {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 CaptureScreen(
                     uiState = uiState,
                     targetState = targetState,
-                    onPrimaryAction = onPrimaryAction
+                    onPrimaryAction = onPrimaryAction,
+                    isTareEnabled = isTareEnabled,
+                    onTare = onTare
                 )
             }
         }
