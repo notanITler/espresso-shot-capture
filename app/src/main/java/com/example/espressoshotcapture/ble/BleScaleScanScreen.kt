@@ -2,25 +2,36 @@ package com.example.espressoshotcapture.ble
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.espressoshotcapture.EspressoShotCaptureApplication
-import com.example.espressoshotcapture.ui.SectionContainer
 
 @Composable
 fun BleScaleScanRoute(
@@ -70,80 +81,153 @@ fun BleScaleScanScreen(
     onTare: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    var isExpanded by remember { mutableStateOf(false) }
+
     Column(
         modifier = modifier
             .fillMaxWidth()
     ) {
-        SectionContainer(title = "BLE scale discovery") {
-            Spacer(modifier = Modifier.height(6.dp))
+        DebugBleContainer(title = "Debug / BLE") {
             BasicText(text = uiState.statusLabel)
-            uiState.errorMessage?.let { errorMessage ->
-                BasicText(text = errorMessage)
-            }
-            Spacer(modifier = Modifier.height(4.dp))
-            BasicText(
-                text = "Start BLE scan",
-                modifier = Modifier.clickable(onClick = onStartScan)
-            )
-            if (uiState.status == BleScaleScanStatus.SCANNING) {
-                BasicText(
-                    text = "Stop BLE scan",
-                    modifier = Modifier.clickable(onClick = onStopScan)
-                )
-            }
-            Spacer(modifier = Modifier.height(4.dp))
-            if (uiState.candidates.isEmpty()) {
-                BasicText(text = "No BLE devices found yet")
-            } else {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 220.dp)
-                        .verticalScroll(rememberScrollState())
-                ) {
-                    uiState.candidates.forEach { candidate ->
-                        val candidateModifier = if (candidate.isExpectedScale) {
-                            Modifier
-                                .fillMaxWidth()
-                                .clickable { onCandidateSelected(candidate) }
-                        } else {
-                            Modifier.fillMaxWidth()
-                        }
-                        Column(modifier = candidateModifier) {
-                            BasicText(text = candidate.displayName)
-                            BasicText(text = candidate.displayAddress)
-                            BasicText(text = candidate.matchLabel)
-                            BasicText(text = candidate.rssiLabel)
-                            BasicText(text = candidate.serviceUuidsLabel)
-                            if (candidate.isExpectedScale) {
-                                BasicText(text = "Tap to connect")
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                    }
-                }
-            }
-        }
-        SectionContainer(title = "Decent Scale GATT debug") {
-            Spacer(modifier = Modifier.height(6.dp))
             BasicText(text = gattState.connectionLabel)
-            BasicText(text = gattState.notifyCharacteristicLabel)
-            BasicText(text = gattState.writeCharacteristicLabel)
-            BasicText(text = gattState.tareStatusLabel)
-            if (gattState.canSendTare) {
-                BasicText(
-                    text = "Tare",
-                    modifier = Modifier.clickable(onClick = onTare)
+            Spacer(modifier = Modifier.height(6.dp))
+            BasicText(
+                text = if (isExpanded) "Hide Debug / BLE" else "Show Debug / BLE",
+                modifier = Modifier.clickable { isExpanded = !isExpanded }
+            )
+            if (isExpanded) {
+                Spacer(modifier = Modifier.height(12.dp))
+                DebugSectionTitle(text = "BLE scale discovery")
+                Spacer(modifier = Modifier.height(6.dp))
+                BleDiscoveryContent(
+                    uiState = uiState,
+                    onStartScan = onStartScan,
+                    onStopScan = onStopScan,
+                    onCandidateSelected = onCandidateSelected
                 )
-            }
-            BasicText(text = gattState.latestRawPacketLabel)
-            BasicText(text = gattState.latestWeightLabel)
-            BasicText(text = gattState.latestTimestampLabel)
-            gattState.latestParserError?.let { parserError ->
-                BasicText(text = "Parser: $parserError")
+                Spacer(modifier = Modifier.height(12.dp))
+                DebugSectionTitle(text = "Decent Scale GATT debug")
+                Spacer(modifier = Modifier.height(6.dp))
+                DecentScaleGattDebugContent(
+                    gattState = gattState,
+                    onTare = onTare
+                )
             }
         }
     }
+}
+
+@Composable
+private fun DebugBleContainer(
+    title: String,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 6.dp)
+            .background(
+                color = Color(0xFFF8F8F8),
+                shape = RoundedCornerShape(8.dp)
+            )
+            .border(
+                width = 1.dp,
+                color = Color(0xFFE0E0E0),
+                shape = RoundedCornerShape(8.dp)
+            )
+            .padding(12.dp)
+    ) {
+        BasicText(
+            text = title,
+            style = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+        )
+        content()
+    }
+}
+
+@Composable
+private fun BleDiscoveryContent(
+    uiState: BleScaleScanState,
+    onStartScan: () -> Unit,
+    onStopScan: () -> Unit,
+    onCandidateSelected: (BleScaleScanCandidate) -> Unit
+) {
+    uiState.errorMessage?.let { errorMessage ->
+        BasicText(text = errorMessage)
+    }
+    Spacer(modifier = Modifier.height(4.dp))
+    BasicText(
+        text = "Start BLE scan",
+        modifier = Modifier.clickable(onClick = onStartScan)
+    )
+    if (uiState.status == BleScaleScanStatus.SCANNING) {
+        BasicText(
+            text = "Stop BLE scan",
+            modifier = Modifier.clickable(onClick = onStopScan)
+        )
+    }
+    Spacer(modifier = Modifier.height(4.dp))
+    if (uiState.candidates.isEmpty()) {
+        BasicText(text = "No BLE devices found yet")
+    } else {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(max = 220.dp)
+                .verticalScroll(rememberScrollState())
+        ) {
+            uiState.candidates.forEach { candidate ->
+                val candidateModifier = if (candidate.isExpectedScale) {
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable { onCandidateSelected(candidate) }
+                } else {
+                    Modifier.fillMaxWidth()
+                }
+                Column(modifier = candidateModifier) {
+                    BasicText(text = candidate.displayName)
+                    BasicText(text = candidate.displayAddress)
+                    BasicText(text = candidate.matchLabel)
+                    BasicText(text = candidate.rssiLabel)
+                    BasicText(text = candidate.serviceUuidsLabel)
+                    if (candidate.isExpectedScale) {
+                        BasicText(text = "Tap to connect")
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun DecentScaleGattDebugContent(
+    gattState: DecentScaleGattState,
+    onTare: () -> Unit
+) {
+    BasicText(text = gattState.notifyCharacteristicLabel)
+    BasicText(text = gattState.writeCharacteristicLabel)
+    BasicText(text = gattState.tareStatusLabel)
+    if (gattState.canSendTare) {
+        BasicText(
+            text = "Tare",
+            modifier = Modifier.clickable(onClick = onTare)
+        )
+    }
+    BasicText(text = gattState.latestRawPacketLabel)
+    BasicText(text = gattState.latestWeightLabel)
+    BasicText(text = gattState.latestTimestampLabel)
+    gattState.latestParserError?.let { parserError ->
+        BasicText(text = "Parser: $parserError")
+    }
+}
+
+@Composable
+private fun DebugSectionTitle(text: String) {
+    BasicText(
+        text = text,
+        style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+    )
 }
 
 @Preview

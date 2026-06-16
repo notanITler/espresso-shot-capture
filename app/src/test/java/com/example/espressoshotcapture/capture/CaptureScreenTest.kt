@@ -244,8 +244,16 @@ class CaptureScreenTest {
             .performScrollTo()
             .assertIsDisplayed()
             .assertTextContains("Weight: 0.0 g")
-        composeTestRule.onNodeWithText("Progress: 0.0 / 36.0 g").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Target not reached").assertIsDisplayed()
+        composeTestRule
+            .onNodeWithTag(CaptureScreenTestTags.RECORDING_PROGRESS)
+            .performScrollTo()
+            .assertIsDisplayed()
+            .assertTextContains("Progress: 0.0 / 36.0 g")
+        composeTestRule
+            .onNodeWithTag(CaptureScreenTestTags.TARGET_REACHED)
+            .performScrollTo()
+            .assertIsDisplayed()
+            .assertTextContains("Target not reached")
         composeTestRule
             .onNodeWithTag(CaptureScreenTestTags.RECORDING_CAPTURE_ELAPSED)
             .performScrollTo()

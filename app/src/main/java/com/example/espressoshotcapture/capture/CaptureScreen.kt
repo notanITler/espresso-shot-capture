@@ -1,19 +1,29 @@
 package com.example.espressoshotcapture.capture
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
-import com.example.espressoshotcapture.ui.SectionContainer
 
 @Composable
 fun CaptureScreen(
@@ -29,116 +39,374 @@ fun CaptureScreen(
     val isPrimaryActionEnabled = uiState.isPrimaryActionEnabled &&
         (uiState.status != CaptureStatus.READY || targetState.isValid)
 
-    SectionContainer(
-        title = "Capture",
+    Column(
         modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 8.dp)
+            .background(
+                color = Color(0xFF171A1E),
+                shape = RoundedCornerShape(8.dp)
+            )
+            .border(
+                width = 1.dp,
+                color = Color(0xFF30363D),
+                shape = RoundedCornerShape(8.dp)
+            )
+            .padding(16.dp)
     ) {
         BasicText(
             text = "Espresso Shot Capture",
-            style = TextStyle(fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+            style = TextStyle(
+                color = Color(0xFFF6F7F9),
+                fontSize = 22.sp,
+                fontWeight = FontWeight.SemiBold
+            )
         )
-        Spacer(modifier = Modifier.height(8.dp))
-        BasicText(text = uiState.scaleConnectionLabel)
+        Spacer(modifier = Modifier.height(12.dp))
+
+        BasicText(
+            text = "Scale / source",
+            style = captureSectionLabelStyle()
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        BasicText(
+            text = uiState.scaleConnectionLabel,
+            style = captureBodyStyle()
+        )
         uiState.scaleModeLabel?.let { scaleModeLabel ->
-            BasicText(text = scaleModeLabel)
+            BasicText(
+                text = scaleModeLabel,
+                style = captureMutedStyle()
+            )
         }
         Spacer(modifier = Modifier.height(8.dp))
-        BasicText(
-            text = "Capture source",
-            style = TextStyle(fontWeight = FontWeight.SemiBold)
-        )
-        BasicText(
-            text = uiState.fakeScaleSourceLabel(),
-            modifier = Modifier
-                .testTag(CaptureScreenTestTags.FAKE_SOURCE)
-                .clickable(onClick = onFakeScaleSelected)
-        )
-        BasicText(
-            text = uiState.decentScaleSourceLabel(),
-            modifier = Modifier
-                .testTag(CaptureScreenTestTags.DECENT_SOURCE)
-                .clickable(onClick = onDecentScaleSelected)
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            SourcePill(
+                text = uiState.fakeScaleSourceLabel(),
+                selected = uiState.selectedScaleSource == CaptureScaleSource.FAKE,
+                modifier = Modifier
+                    .weight(1f)
+                    .testTag(CaptureScreenTestTags.FAKE_SOURCE)
+                    .clickable(onClick = onFakeScaleSelected)
+            )
+            SourcePill(
+                text = uiState.decentScaleSourceLabel(),
+                selected = uiState.selectedScaleSource == CaptureScaleSource.DECENT,
+                modifier = Modifier
+                    .weight(1f)
+                    .testTag(CaptureScreenTestTags.DECENT_SOURCE)
+                    .clickable(onClick = onDecentScaleSelected)
+            )
+        }
+        Spacer(modifier = Modifier.height(6.dp))
         BasicText(
             text = uiState.captureSourceStatusLabel,
-            modifier = Modifier.testTag(CaptureScreenTestTags.SOURCE_STATUS)
+            modifier = Modifier.testTag(CaptureScreenTestTags.SOURCE_STATUS),
+            style = captureMutedStyle()
         )
         uiState.captureSourceMessage?.let { sourceMessage ->
             BasicText(
                 text = sourceMessage,
-                modifier = Modifier.testTag(CaptureScreenTestTags.SOURCE_MESSAGE)
+                modifier = Modifier.testTag(CaptureScreenTestTags.SOURCE_MESSAGE),
+                style = captureWarningStyle()
             )
         }
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(16.dp))
+
         BasicText(
-            text = "Target",
-            style = TextStyle(fontWeight = FontWeight.SemiBold)
+            text = "Dose / target / ratio",
+            style = captureSectionLabelStyle()
         )
-        BasicText(text = "Dose in grams")
-        BasicTextField(
-            value = targetState.doseInputValue,
-            onValueChange = onDoseChanged,
-            singleLine = true,
-            modifier = Modifier.testTag(CaptureScreenTestTags.DOSE_INPUT)
-        )
-        BasicText(text = "Target yield in grams")
-        BasicTextField(
-            value = targetState.targetYieldInputValue,
-            onValueChange = onTargetYieldChanged,
-            singleLine = true,
-            modifier = Modifier.testTag(CaptureScreenTestTags.TARGET_YIELD_INPUT)
-        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            TargetInput(
+                label = "Dose in grams",
+                value = targetState.doseInputValue,
+                onValueChange = onDoseChanged,
+                testTag = CaptureScreenTestTags.DOSE_INPUT,
+                modifier = Modifier
+                    .weight(1f)
+            )
+            TargetInput(
+                label = "Target yield in grams",
+                value = targetState.targetYieldInputValue,
+                onValueChange = onTargetYieldChanged,
+                testTag = CaptureScreenTestTags.TARGET_YIELD_INPUT,
+                modifier = Modifier
+                    .weight(1f)
+            )
+        }
+        Spacer(modifier = Modifier.height(6.dp))
         BasicText(
             text = targetState.ratioLabel,
-            modifier = Modifier.testTag(CaptureScreenTestTags.RATIO_DISPLAY)
+            modifier = Modifier.testTag(CaptureScreenTestTags.RATIO_DISPLAY),
+            style = captureBodyStyle()
         )
         targetState.validationMessage?.let { validationMessage ->
             BasicText(
                 text = validationMessage,
-                modifier = Modifier.testTag(CaptureScreenTestTags.VALIDATION_MESSAGE)
+                modifier = Modifier.testTag(CaptureScreenTestTags.VALIDATION_MESSAGE),
+                style = captureWarningStyle()
             )
         }
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(18.dp))
+
         BasicText(
-            text = "Live shot",
-            style = TextStyle(fontWeight = FontWeight.SemiBold)
+            text = "Live shot values",
+            style = captureSectionLabelStyle()
         )
-        BasicText(text = uiState.progressLabel)
-        BasicText(text = uiState.targetReachedLabel)
+        Spacer(modifier = Modifier.height(8.dp))
+        LargeMetric(
+            text = uiState.currentWeightLabel ?: "Weight: 0.0 g",
+            modifier = Modifier.testTag(CaptureScreenTestTags.RECORDING_WEIGHT)
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        BasicText(
+            text = uiState.progressLabel,
+            modifier = Modifier.testTag(CaptureScreenTestTags.RECORDING_PROGRESS),
+            style = captureBodyStyle()
+        )
+        BasicText(
+            text = uiState.targetReachedLabel,
+            modifier = Modifier.testTag(CaptureScreenTestTags.TARGET_REACHED),
+            style = captureMutedStyle()
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            SupportingMetric(
+                text = uiState.captureElapsedLabel ?: "Capture elapsed: 0 s",
+                modifier = Modifier
+                    .weight(1f)
+                    .testTag(CaptureScreenTestTags.RECORDING_CAPTURE_ELAPSED)
+            )
+            SupportingMetric(
+                text = uiState.averageFlowLabel ?: "Average flow: 0.0 g/s",
+                modifier = Modifier
+                    .weight(1f)
+                    .testTag(CaptureScreenTestTags.RECORDING_AVERAGE_FLOW)
+            )
+        }
+        Spacer(modifier = Modifier.height(18.dp))
+
+        BasicText(
+            text = "Shot state",
+            style = captureSectionLabelStyle()
+        )
+        Spacer(modifier = Modifier.height(4.dp))
         BasicText(
             text = uiState.shotStatusLabel,
-            modifier = Modifier.testTag(CaptureScreenTestTags.STATUS)
+            modifier = Modifier.testTag(CaptureScreenTestTags.STATUS),
+            style = TextStyle(
+                color = Color(0xFFF6F7F9),
+                fontSize = 18.sp,
+                fontWeight = FontWeight.SemiBold
+            )
         )
+        Spacer(modifier = Modifier.height(14.dp))
+
         BasicText(
-            text = uiState.primaryActionLabel,
-            modifier = if (isPrimaryActionEnabled) {
-                Modifier
-                    .testTag(CaptureScreenTestTags.PRIMARY_ACTION)
-                    .clickable(onClick = onPrimaryAction)
-            } else {
-                Modifier.testTag(CaptureScreenTestTags.PRIMARY_ACTION)
-            }
+            text = "Actions",
+            style = captureSectionLabelStyle()
         )
-        uiState.currentWeightLabel?.let { currentWeightLabel ->
-            BasicText(
-                text = currentWeightLabel,
-                modifier = Modifier.testTag(CaptureScreenTestTags.RECORDING_WEIGHT)
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            ActionPill(
+                text = "Tare",
+                enabled = false,
+                modifier = Modifier
+                    .weight(1f)
+                    .testTag(CaptureScreenTestTags.TARE_ACTION)
             )
-        }
-        uiState.captureElapsedLabel?.let { captureElapsedLabel ->
-            BasicText(
-                text = captureElapsedLabel,
-                modifier = Modifier.testTag(CaptureScreenTestTags.RECORDING_CAPTURE_ELAPSED)
-            )
-        }
-        uiState.averageFlowLabel?.let { averageFlowLabel ->
-            BasicText(
-                text = averageFlowLabel,
-                modifier = Modifier.testTag(CaptureScreenTestTags.RECORDING_AVERAGE_FLOW)
+            ActionPill(
+                text = uiState.primaryActionLabel,
+                enabled = isPrimaryActionEnabled,
+                modifier = if (isPrimaryActionEnabled) {
+                    Modifier
+                        .weight(2f)
+                        .testTag(CaptureScreenTestTags.PRIMARY_ACTION)
+                        .clickable(onClick = onPrimaryAction)
+                } else {
+                    Modifier
+                        .weight(2f)
+                        .testTag(CaptureScreenTestTags.PRIMARY_ACTION)
+                }
             )
         }
     }
 }
+
+@Composable
+private fun SourcePill(
+    text: String,
+    selected: Boolean,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .semantics(mergeDescendants = true) {}
+            .background(
+                color = if (selected) Color(0xFF263D37) else Color(0xFF20242A),
+                shape = RoundedCornerShape(6.dp)
+            )
+            .border(
+                width = 1.dp,
+                color = if (selected) Color(0xFF68D391) else Color(0xFF3A414A),
+                shape = RoundedCornerShape(6.dp)
+            )
+            .padding(horizontal = 10.dp, vertical = 8.dp)
+    ) {
+        BasicText(
+            text = text,
+            style = TextStyle(
+                color = if (selected) Color(0xFFD8FFE8) else Color(0xFFD0D6DD),
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+        )
+    }
+}
+
+@Composable
+private fun TargetInput(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    testTag: String,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier) {
+        BasicText(
+            text = label,
+            style = captureMutedStyle()
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        BasicTextField(
+            value = value,
+            onValueChange = onValueChange,
+            singleLine = true,
+            textStyle = TextStyle(
+                color = Color(0xFFF6F7F9),
+                fontSize = 18.sp,
+                fontWeight = FontWeight.SemiBold
+            ),
+            modifier = Modifier
+                .testTag(testTag)
+                .fillMaxWidth()
+                .background(
+                    color = Color(0xFF0F1114),
+                    shape = RoundedCornerShape(6.dp)
+                )
+                .border(
+                    width = 1.dp,
+                    color = Color(0xFF3A414A),
+                    shape = RoundedCornerShape(6.dp)
+                )
+                .padding(horizontal = 10.dp, vertical = 8.dp)
+        )
+    }
+}
+
+@Composable
+private fun LargeMetric(
+    text: String,
+    modifier: Modifier = Modifier
+) {
+    BasicText(
+        text = text,
+        modifier = modifier,
+        style = TextStyle(
+            color = Color(0xFFFFFFFF),
+            fontSize = 34.sp,
+            fontWeight = FontWeight.Bold
+        )
+    )
+}
+
+@Composable
+private fun SupportingMetric(
+    text: String,
+    modifier: Modifier = Modifier
+) {
+    BasicText(
+        text = text,
+        modifier = modifier
+            .background(
+                color = Color(0xFF20242A),
+                shape = RoundedCornerShape(6.dp)
+            )
+            .padding(10.dp),
+        style = TextStyle(
+            color = Color(0xFFE6EBF0),
+            fontSize = 14.sp,
+            fontWeight = FontWeight.SemiBold
+        )
+    )
+}
+
+@Composable
+private fun ActionPill(
+    text: String,
+    enabled: Boolean,
+    modifier: Modifier = Modifier
+) {
+    BasicText(
+        text = text,
+        modifier = modifier
+            .background(
+                color = if (enabled) Color(0xFFF2C94C) else Color(0xFF24282E),
+                shape = RoundedCornerShape(6.dp)
+            )
+            .border(
+                width = 1.dp,
+                color = if (enabled) Color(0xFFF7D66F) else Color(0xFF3A414A),
+                shape = RoundedCornerShape(6.dp)
+            )
+            .padding(horizontal = 12.dp, vertical = 12.dp),
+        style = TextStyle(
+            color = if (enabled) Color(0xFF181A1D) else Color(0xFF6F7782),
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Bold
+        )
+    )
+}
+
+private fun captureSectionLabelStyle(): TextStyle =
+    TextStyle(
+        color = Color(0xFF97A2AD),
+        fontSize = 12.sp,
+        fontWeight = FontWeight.SemiBold
+    )
+
+private fun captureBodyStyle(): TextStyle =
+    TextStyle(
+        color = Color(0xFFE6EBF0),
+        fontSize = 14.sp
+    )
+
+private fun captureMutedStyle(): TextStyle =
+    TextStyle(
+        color = Color(0xFFAAB2BC),
+        fontSize = 13.sp
+    )
+
+private fun captureWarningStyle(): TextStyle =
+    TextStyle(
+        color = Color(0xFFFFC078),
+        fontSize = 13.sp,
+        fontWeight = FontWeight.SemiBold
+    )
 
 object CaptureScreenTestTags {
     const val FAKE_SOURCE = "fake-scale-source"
@@ -149,11 +417,15 @@ object CaptureScreenTestTags {
     const val TARGET_YIELD_INPUT = "target-yield-input"
     const val RATIO_DISPLAY = "ratio-display"
     const val VALIDATION_MESSAGE = "target-validation-message"
+    const val TARE_ACTION = "tare-action"
+    const val TARE_STATUS = "tare-status"
     const val PRIMARY_ACTION = "primary-capture-action"
     const val STATUS = "capture-status"
     const val RECORDING_WEIGHT = "recording-weight"
+    const val RECORDING_PROGRESS = "recording-progress"
     const val RECORDING_CAPTURE_ELAPSED = "recording-capture-elapsed"
     const val RECORDING_AVERAGE_FLOW = "recording-average-flow"
+    const val TARGET_REACHED = "target-reached"
 }
 
 private fun CaptureUiState.fakeScaleSourceLabel(): String =
