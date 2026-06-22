@@ -136,8 +136,10 @@ fun ScaleConnectionHeader(
     ) {
         Row(modifier = Modifier.fillMaxWidth()) {
             BasicText(
-                text = "Scale",
-                modifier = Modifier.weight(1f),
+                text = "David's Coffee Companion",
+                modifier = Modifier
+                    .weight(1f)
+                    .testTag(ScaleConnectionTestTags.HEADER_TITLE),
                 style = TextStyle(
                     color = Color(0xFFF6F7F9),
                     fontSize = 18.sp,
@@ -645,6 +647,7 @@ private fun debugBleActionStyle(): TextStyle =
     )
 
 object ScaleConnectionTestTags {
+    const val HEADER_TITLE = "app-header-title"
     const val BLUETOOTH_BUTTON = "bluetooth-header-button"
     const val PANEL = "scale-connection-panel"
     const val SCAN_ACTION = "scale-connection-scan-action"

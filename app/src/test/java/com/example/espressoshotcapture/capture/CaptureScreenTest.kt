@@ -10,9 +10,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertHasClickAction
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -35,14 +37,16 @@ class CaptureScreenTest {
     fun keyCaptureLabelsAreDisplayed() {
         setScrollableCaptureContent()
 
-        composeTestRule.onNodeWithText("Espresso Shot Capture").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Scale: Not connected").assertIsDisplayed()
+        composeTestRule.onAllNodesWithText("Espresso Shot Capture").assertCountEquals(0)
+        composeTestRule.onAllNodesWithText("Scale / source").assertCountEquals(0)
+        composeTestRule.onAllNodesWithText("Scale: Not connected").assertCountEquals(0)
+        composeTestRule.onAllNodesWithText("Fake scale simulation").assertCountEquals(0)
+        composeTestRule.onAllNodesWithText("Capture source: Fake scale/demo").assertCountEquals(0)
+        composeTestRule.onAllNodesWithText("Dose / target / ratio").assertCountEquals(0)
         composeTestRule.onNodeWithTag(CaptureScreenTestTags.FAKE_SOURCE)
-            .assertTextContains("Selected: Fake scale/demo")
+            .assertTextContains("Demo mode")
         composeTestRule.onNodeWithTag(CaptureScreenTestTags.DECENT_SOURCE)
-            .assertTextContains("Decent Scale/real")
-        composeTestRule.onNodeWithTag(CaptureScreenTestTags.SOURCE_STATUS)
-            .assertTextContains("Capture source: Fake scale/demo")
+            .assertTextContains("Decent Scale")
         composeTestRule.onNodeWithTag(CaptureScreenTestTags.DOSE_INPUT)
             .assertIsDisplayed()
             .assertTextContains("18.0")
@@ -76,7 +80,7 @@ class CaptureScreenTest {
 
         setScrollableCaptureContent(uiState = uiState)
 
-        composeTestRule.onNodeWithText("Scale: Not connected").assertIsDisplayed()
+        composeTestRule.onAllNodesWithText("Scale: Not connected").assertCountEquals(0)
         composeTestRule.onNodeWithTag(CaptureScreenTestTags.DOSE_INPUT).assertTextContains("18.0")
         composeTestRule.onNodeWithTag(CaptureScreenTestTags.TARGET_YIELD_INPUT).assertTextContains("36.0")
         composeTestRule.onNodeWithTag(CaptureScreenTestTags.RATIO_DISPLAY).assertTextContains("Ratio: 1:2")
@@ -97,15 +101,17 @@ class CaptureScreenTest {
     }
 
     @Test
-    fun demoScaleLabelIsDisplayedWhenProvidedByUiState() {
+    fun demoScaleLabelIsNotShownAsRedundantCopy() {
         setScrollableCaptureContent(
             uiState = CaptureUiStateMapper.initialDisconnectedReady(
                 scaleModeLabel = "Fake scale simulation"
             )
         )
 
-        composeTestRule.onNodeWithText("Scale: Not connected").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Fake scale simulation").assertIsDisplayed()
+        composeTestRule.onAllNodesWithText("Scale: Not connected").assertCountEquals(0)
+        composeTestRule.onAllNodesWithText("Fake scale simulation").assertCountEquals(0)
+        composeTestRule.onNodeWithTag(CaptureScreenTestTags.FAKE_SOURCE)
+            .assertTextContains("Demo mode")
     }
 
     @Test

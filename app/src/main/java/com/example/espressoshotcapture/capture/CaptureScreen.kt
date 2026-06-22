@@ -62,32 +62,6 @@ fun CaptureScreen(
             )
             .padding(12.dp)
     ) {
-        BasicText(
-            text = "Espresso Shot Capture",
-            style = TextStyle(
-                color = Color(0xFFF6F7F9),
-                fontSize = 20.sp,
-                fontWeight = FontWeight.SemiBold
-            )
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-
-        BasicText(
-            text = "Scale / source",
-            style = captureSectionLabelStyle()
-        )
-        Spacer(modifier = Modifier.height(2.dp))
-        BasicText(
-            text = uiState.scaleConnectionLabel,
-            style = captureBodyStyle()
-        )
-        uiState.scaleModeLabel?.let { scaleModeLabel ->
-            BasicText(
-                text = scaleModeLabel,
-                style = captureMutedStyle()
-            )
-        }
-        Spacer(modifier = Modifier.height(6.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -109,26 +83,7 @@ fun CaptureScreen(
                     .clickable(onClick = onDecentScaleSelected)
             )
         }
-        Spacer(modifier = Modifier.height(6.dp))
-        BasicText(
-            text = uiState.captureSourceStatusLabel,
-            modifier = Modifier.testTag(CaptureScreenTestTags.SOURCE_STATUS),
-            style = captureMutedStyle()
-        )
-        uiState.captureSourceMessage?.let { sourceMessage ->
-            BasicText(
-                text = sourceMessage,
-                modifier = Modifier.testTag(CaptureScreenTestTags.SOURCE_MESSAGE),
-                style = captureWarningStyle()
-            )
-        }
-        Spacer(modifier = Modifier.height(10.dp))
-
-        BasicText(
-            text = "Dose / target / ratio",
-            style = captureSectionLabelStyle()
-        )
-        Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(8.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -502,18 +457,10 @@ object CaptureScreenTestTags {
 }
 
 private fun CaptureUiState.fakeScaleSourceLabel(): String =
-    if (selectedScaleSource == CaptureScaleSource.FAKE) {
-        "Selected: Fake scale/demo"
-    } else {
-        "Fake scale/demo"
-    }
+    "Demo mode"
 
 private fun CaptureUiState.decentScaleSourceLabel(): String =
-    if (selectedScaleSource == CaptureScaleSource.DECENT) {
-        "Selected: Decent Scale/real"
-    } else {
-        "Decent Scale/real"
-    }
+    "Decent Scale"
 
 @Preview
 @Composable
