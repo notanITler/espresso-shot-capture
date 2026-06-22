@@ -9,6 +9,9 @@ import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import kotlin.math.roundToInt
 
 object ShotHistoryMapper {
@@ -22,12 +25,14 @@ object ShotHistoryMapper {
     const val UNKNOWN_SAMPLE_COUNT_LABEL: String = "Weight readings: --"
     const val UNKNOWN_DOSE_LABEL: String = "Dose: --"
     const val UNKNOWN_QUALITY_LABEL: String = "Data status: --"
+    private const val CREATED_AT_PATTERN: String = "MMM d, HH:mm:ss"
 
     fun fromEntity(entity: ShotEntity): ShotHistoryItem =
         summaryFromJson(entity.json).let { summary ->
             ShotHistoryItem(
                 id = entity.id,
                 createdAtEpochMillis = entity.createdAtEpochMillis,
+                createdLabel = createdLabel(entity.createdAtEpochMillis),
                 sourceLabel = summary.sourceLabel,
                 qualityLabel = summary.qualityLabel,
                 finalYieldLabel = summary.finalYieldLabel,
@@ -63,6 +68,11 @@ object ShotHistoryMapper {
         val targetYieldG = target?.doubleAt("targetYieldG")
         val targetRatio = target?.doubleAt("targetRatio")
         val averageFlowGPerS = result?.doubleAt("averageFlowGPerS")
+            ?: actualYieldG?.let { yield ->
+                flowTimeMs?.takeIf { timeMs -> timeMs > 0L }?.let { timeMs ->
+                    yield / (timeMs / 1_000.0)
+                }
+            }
         val sampleCount = result?.longAt("sampleCount") ?: samples?.size?.toLong()
         val targetReachedLabel = timing?.let { timingObject ->
             if ("targetReachedAtMs" in timingObject) {
@@ -136,6 +146,9 @@ object ShotHistoryMapper {
 
     private fun JsonObject.stringAt(key: String): String? =
         this[key]?.jsonPrimitive?.contentOrNull
+
+    fun createdLabel(createdAtEpochMillis: Long): String =
+        "Created: ${SimpleDateFormat(CREATED_AT_PATTERN, Locale.getDefault()).format(Date(createdAtEpochMillis))}"
 
     private fun Double.toOneDecimal(): String =
         ((this * 10.0).roundToInt() / 10.0).toString()

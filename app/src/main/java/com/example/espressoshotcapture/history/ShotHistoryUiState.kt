@@ -9,6 +9,7 @@ data class ShotHistoryDetail(
     val id: String,
     val createdAtEpochMillis: Long,
     val json: String,
+    val createdLabel: String = ShotHistoryMapper.createdLabel(createdAtEpochMillis),
     val sourceLabel: String = ShotHistoryMapper.UNKNOWN_SOURCE_LABEL,
     val qualityLabel: String = ShotHistoryMapper.UNKNOWN_QUALITY_LABEL,
     val finalYieldLabel: String = ShotHistoryMapper.UNKNOWN_YIELD_LABEL,

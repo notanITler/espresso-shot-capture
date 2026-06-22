@@ -20,6 +20,7 @@ object ShotHistoryStateMapper {
                 id = id,
                 createdAtEpochMillis = createdAtEpochMillis,
                 json = json,
+                createdLabel = ShotHistoryMapper.createdLabel(createdAtEpochMillis),
                 sourceLabel = summary.sourceLabel,
                 qualityLabel = summary.qualityLabel,
                 finalYieldLabel = summary.finalYieldLabel,

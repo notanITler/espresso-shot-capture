@@ -3,6 +3,7 @@ package com.example.espressoshotcapture.history
 data class ShotHistoryItem(
     val id: String,
     val createdAtEpochMillis: Long,
+    val createdLabel: String = ShotHistoryMapper.createdLabel(createdAtEpochMillis),
     val sourceLabel: String = ShotHistoryMapper.UNKNOWN_SOURCE_LABEL,
     val qualityLabel: String = ShotHistoryMapper.UNKNOWN_QUALITY_LABEL,
     val finalYieldLabel: String = ShotHistoryMapper.UNKNOWN_YIELD_LABEL,

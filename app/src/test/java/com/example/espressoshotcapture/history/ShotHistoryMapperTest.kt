@@ -48,6 +48,7 @@ class ShotHistoryMapperTest {
                 qualityLabel = "Data status: Complete",
                 finalYieldLabel = "Yield: 36.8 g",
                 flowTimeLabel = "Flow time: 28 s",
+                averageFlowLabel = "Average flow: 1.3 g/s",
                 sampleCountLabel = "Weight readings: 3",
                 doseLabel = "Dose: 18.0 g",
                 targetYieldLabel = "Target: 36.0 g",
@@ -91,6 +92,40 @@ class ShotHistoryMapperTest {
         assertEquals("Target: 36.0 g", summary.targetYieldLabel)
         assertEquals("Ratio: 1:2", summary.ratioLabel)
         assertEquals("Target reached: yes", summary.targetReachedLabel)
+    }
+
+    @Test
+    fun derivesAverageFlowWhenStoredAverageIsMissing() {
+        val summary = ShotHistoryMapper.summaryFromJson(
+            """
+                {
+                  "schemaVersion": 1,
+                  "shot": {
+                    "timing": { "flowTimeMs": 20000 },
+                    "result": { "actualYieldG": 42.0, "sampleCount": 4 }
+                  }
+                }
+            """.trimIndent()
+        )
+
+        assertEquals("Average flow: 2.1 g/s", summary.averageFlowLabel)
+    }
+
+    @Test
+    fun averageFlowStaysUnknownWhenItCannotBeComputedSafely() {
+        val summary = ShotHistoryMapper.summaryFromJson(
+            """
+                {
+                  "schemaVersion": 1,
+                  "shot": {
+                    "timing": { "flowTimeMs": 0 },
+                    "result": { "actualYieldG": 42.0, "sampleCount": 4 }
+                  }
+                }
+            """.trimIndent()
+        )
+
+        assertEquals("Average flow: --", summary.averageFlowLabel)
     }
 
     @Test

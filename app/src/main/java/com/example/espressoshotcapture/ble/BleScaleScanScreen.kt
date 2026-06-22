@@ -312,12 +312,13 @@ fun BleScaleScanScreen(
             .fillMaxWidth()
     ) {
         DebugBleContainer(title = "Debug / BLE") {
-            BasicText(text = uiState.statusLabel)
-            BasicText(text = gattState.connectionLabel)
+            BasicText(text = uiState.statusLabel, style = debugBleBodyStyle())
+            BasicText(text = gattState.connectionLabel, style = debugBleBodyStyle())
             Spacer(modifier = Modifier.height(6.dp))
             BasicText(
                 text = if (isExpanded) "Hide Debug / BLE" else "Show Debug / BLE",
-                modifier = Modifier.clickable { isExpanded = !isExpanded }
+                modifier = Modifier.clickable { isExpanded = !isExpanded },
+                style = debugBleActionStyle()
             )
             if (isExpanded) {
                 Spacer(modifier = Modifier.height(12.dp))
@@ -352,19 +353,23 @@ private fun DebugBleContainer(
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 6.dp)
             .background(
-                color = Color(0xFFF8F8F8),
+                color = Color(0xFF171A1E),
                 shape = RoundedCornerShape(8.dp)
             )
             .border(
                 width = 1.dp,
-                color = Color(0xFFE0E0E0),
+                color = Color(0xFF30363D),
                 shape = RoundedCornerShape(8.dp)
             )
             .padding(12.dp)
     ) {
         BasicText(
             text = title,
-            style = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            style = TextStyle(
+                color = Color(0xFFF6F7F9),
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold
+            )
         )
         content()
     }
@@ -379,22 +384,24 @@ private fun BleDiscoveryContent(
     onCandidateSelected: (BleScaleScanCandidate) -> Unit
 ) {
     uiState.errorMessage?.let { errorMessage ->
-        BasicText(text = errorMessage)
+        BasicText(text = errorMessage, style = debugBleMutedStyle())
     }
     Spacer(modifier = Modifier.height(4.dp))
     BasicText(
         text = "Start BLE scan",
-        modifier = Modifier.clickable(onClick = onStartScan)
+        modifier = Modifier.clickable(onClick = onStartScan),
+        style = debugBleActionStyle()
     )
     if (uiState.status == BleScaleScanStatus.SCANNING) {
         BasicText(
             text = "Stop BLE scan",
-            modifier = Modifier.clickable(onClick = onStopScan)
+            modifier = Modifier.clickable(onClick = onStopScan),
+            style = debugBleActionStyle()
         )
     }
     Spacer(modifier = Modifier.height(4.dp))
     if (uiState.candidates.isEmpty()) {
-        BasicText(text = "No BLE devices found yet")
+        BasicText(text = "No BLE devices found yet", style = debugBleMutedStyle())
     } else {
         Column(
             modifier = Modifier
@@ -417,13 +424,16 @@ private fun BleDiscoveryContent(
                     Modifier.fillMaxWidth()
                 }
                 Column(modifier = candidateModifier) {
-                    BasicText(text = candidate.displayName)
-                    BasicText(text = candidate.displayAddress)
-                    BasicText(text = candidate.matchLabel)
-                    BasicText(text = candidate.rssiLabel)
-                    BasicText(text = candidate.serviceUuidsLabel)
+                    BasicText(text = candidate.displayName, style = debugBleBodyStyle())
+                    BasicText(text = candidate.displayAddress, style = debugBleMutedStyle())
+                    BasicText(text = candidate.matchLabel, style = debugBleBodyStyle())
+                    BasicText(text = candidate.rssiLabel, style = debugBleMutedStyle())
+                    BasicText(text = candidate.serviceUuidsLabel, style = debugBleMutedStyle())
                     if (candidate.isExpectedScale) {
-                        BasicText(text = decentScaleCandidateActionLabel(gattState))
+                        BasicText(
+                            text = decentScaleCandidateActionLabel(gattState),
+                            style = debugBleActionStyle()
+                        )
                     }
                 }
                 Spacer(modifier = Modifier.height(8.dp))
@@ -437,20 +447,21 @@ private fun DecentScaleGattDebugContent(
     gattState: DecentScaleGattState,
     onTare: () -> Unit
 ) {
-    BasicText(text = gattState.notifyCharacteristicLabel)
-    BasicText(text = gattState.writeCharacteristicLabel)
-    BasicText(text = gattState.tareStatusLabel)
+    BasicText(text = gattState.notifyCharacteristicLabel, style = debugBleBodyStyle())
+    BasicText(text = gattState.writeCharacteristicLabel, style = debugBleBodyStyle())
+    BasicText(text = gattState.tareStatusLabel, style = debugBleBodyStyle())
     if (gattState.canSendTare) {
         BasicText(
             text = "Tare",
-            modifier = Modifier.clickable(onClick = onTare)
+            modifier = Modifier.clickable(onClick = onTare),
+            style = debugBleActionStyle()
         )
     }
-    BasicText(text = gattState.latestRawPacketLabel)
-    BasicText(text = gattState.latestWeightLabel)
-    BasicText(text = gattState.latestTimestampLabel)
+    BasicText(text = gattState.latestRawPacketLabel, style = debugBleMutedStyle())
+    BasicText(text = gattState.latestWeightLabel, style = debugBleBodyStyle())
+    BasicText(text = gattState.latestTimestampLabel, style = debugBleMutedStyle())
     gattState.latestParserError?.let { parserError ->
-        BasicText(text = "Parser: $parserError")
+        BasicText(text = "Parser: $parserError", style = debugBleMutedStyle())
     }
 }
 
@@ -458,7 +469,11 @@ private fun DecentScaleGattDebugContent(
 private fun DebugSectionTitle(text: String) {
     BasicText(
         text = text,
-        style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+        style = TextStyle(
+            color = Color(0xFFF6F7F9),
+            fontSize = 14.sp,
+            fontWeight = FontWeight.SemiBold
+        )
     )
 }
 
@@ -607,6 +622,25 @@ private fun scaleConnectionActionStyle(): TextStyle =
     TextStyle(
         color = Color(0xFFF2C94C),
         fontSize = 14.sp,
+        fontWeight = FontWeight.SemiBold
+    )
+
+private fun debugBleBodyStyle(): TextStyle =
+    TextStyle(
+        color = Color(0xFFE6EBF0),
+        fontSize = 13.sp
+    )
+
+private fun debugBleMutedStyle(): TextStyle =
+    TextStyle(
+        color = Color(0xFFAAB2BC),
+        fontSize = 12.sp
+    )
+
+private fun debugBleActionStyle(): TextStyle =
+    TextStyle(
+        color = Color(0xFFF2C94C),
+        fontSize = 13.sp,
         fontWeight = FontWeight.SemiBold
     )
 

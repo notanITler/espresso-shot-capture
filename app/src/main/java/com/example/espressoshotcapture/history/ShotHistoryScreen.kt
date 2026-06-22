@@ -170,7 +170,7 @@ private fun ShotHistoryRow(
             style = historyMutedStyle()
         )
         BasicText(
-            text = "Created: ${item.createdAtEpochMillis}",
+            text = item.createdLabel,
             style = historyMutedStyle()
         )
     }
@@ -194,7 +194,7 @@ private fun ShotHistoryDetailView(
             modifier = Modifier.testTag(ShotHistoryScreenTestTags.DETAIL_MAIN_SUMMARY)
         ) {
             DetailMetricRow(primary = detail.doseLabel, secondary = detail.finalYieldLabel)
-            DetailMetricRow(primary = detail.averageFlowLabel, secondary = "id: ${detail.id}")
+            DetailMetricRow(primary = detail.averageFlowLabel)
         }
         DetailGroup(
             title = "Shot timing / target",
@@ -208,7 +208,7 @@ private fun ShotHistoryDetailView(
             modifier = Modifier.testTag(ShotHistoryScreenTestTags.DETAIL_DATA_CONFIDENCE)
         ) {
             DetailMetricRow(primary = detail.sourceLabel, secondary = detail.qualityLabel)
-            DetailMetricRow(primary = detail.sampleCountLabel, secondary = "Created: ${detail.createdAtEpochMillis}")
+            DetailMetricRow(primary = detail.sampleCountLabel, secondary = detail.createdLabel)
         }
         BasicText(
             text = if (isRawJsonVisible) {
@@ -283,7 +283,7 @@ private fun DetailGroup(
 @Composable
 private fun DetailMetricRow(
     primary: String,
-    secondary: String
+    secondary: String? = null
 ) {
     Row(
         modifier = Modifier
@@ -295,11 +295,15 @@ private fun DetailMetricRow(
             modifier = Modifier.weight(1f),
             style = historyStrongStyle()
         )
-        BasicText(
-            text = secondary,
-            modifier = Modifier.weight(1f),
-            style = historyBodyStyle()
-        )
+        if (secondary != null) {
+            BasicText(
+                text = secondary,
+                modifier = Modifier.weight(1f),
+                style = historyBodyStyle()
+            )
+        } else {
+            Spacer(modifier = Modifier.weight(1f))
+        }
     }
 }
 
