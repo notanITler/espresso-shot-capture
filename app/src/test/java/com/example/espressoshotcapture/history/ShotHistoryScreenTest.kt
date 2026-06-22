@@ -43,8 +43,8 @@ class ShotHistoryScreenTest {
                     flowTimeLabel = "Flow time: 28 s",
                     targetYieldLabel = "Target: 36.0 g",
                     sourceLabel = "Source: Fake/demo",
-                    qualityLabel = "Quality: Complete",
-                    sampleCountLabel = "Samples: 3",
+                    qualityLabel = "Data status: Complete",
+                    sampleCountLabel = "Weight readings: 3",
                     doseLabel = "Dose: 18.0 g"
                 ),
                 ShotHistoryItem(id = "shot-2000", createdAtEpochMillis = 2_000L)
@@ -55,8 +55,9 @@ class ShotHistoryScreenTest {
             "Source: Fake/demo  |  Yield: 36.8 g"
         ).assertIsDisplayed()
         composeTestRule.onNodeWithText(
-            "Flow time: 28 s  |  Samples: 3  |  Quality: Complete"
+            "Flow time: 28 s  |  Weight readings: 3"
         ).assertIsDisplayed()
+        composeTestRule.onNodeWithText("Data status: Complete").assertIsDisplayed()
         composeTestRule.onNodeWithText(
             "Created: 1000"
         ).assertIsDisplayed()
@@ -75,8 +76,8 @@ class ShotHistoryScreenTest {
                             sourceLabel = "Source: Decent Scale",
                             finalYieldLabel = "Yield: 37.1 g",
                             flowTimeLabel = "Flow time: 29 s",
-                            sampleCountLabel = "Samples: 12",
-                            qualityLabel = "Quality: Complete"
+                            sampleCountLabel = "Weight readings: 12",
+                            qualityLabel = "Data status: Complete"
                         )
                     )
                 )
@@ -85,8 +86,9 @@ class ShotHistoryScreenTest {
 
         composeTestRule.onNodeWithText("Source: Decent Scale  |  Yield: 37.1 g").assertIsDisplayed()
         composeTestRule.onNodeWithText(
-            "Flow time: 29 s  |  Samples: 12  |  Quality: Complete"
+            "Flow time: 29 s  |  Weight readings: 12"
         ).assertIsDisplayed()
+        composeTestRule.onNodeWithText("Data status: Complete").assertIsDisplayed()
         composeTestRule.onNodeWithText("Created: 3000").assertIsDisplayed()
         composeTestRule.onAllNodesWithText("Raw JSON / debug detail").assertCountEquals(0)
     }
@@ -131,12 +133,13 @@ class ShotHistoryScreenTest {
                         createdAtEpochMillis = item.createdAtEpochMillis,
                         json = json,
                         sourceLabel = "Source: Decent Scale",
-                        qualityLabel = "Quality: Complete",
+                        qualityLabel = "Data status: Complete",
                         finalYieldLabel = "Yield: 36.8 g",
                         flowTimeLabel = "Flow time: 28 s",
                         targetYieldLabel = "Target: 36.0 g",
+                        ratioLabel = "Ratio: 1:2",
                         averageFlowLabel = "Average flow: 1.3 g/s",
-                        sampleCountLabel = "Samples: 4",
+                        sampleCountLabel = "Weight readings: 4",
                         doseLabel = "Dose: 18.0 g",
                         targetReachedLabel = "Target reached: yes"
                     )
@@ -144,24 +147,29 @@ class ShotHistoryScreenTest {
             )
         }
 
-        composeTestRule.onNodeWithText("Created: 2000").performClick()
+        composeTestRule
+            .onNodeWithTag(ShotHistoryScreenTestTags.historyRow("shot-2000"))
+            .performClick()
 
         composeTestRule.onNodeWithText("Selected Shot Detail").assertIsDisplayed()
         composeTestRule.onAllNodesWithTag(ShotHistoryScreenTestTags.SELECTED_DETAIL).assertCountEquals(1)
-        composeTestRule.onAllNodesWithText("id: shot-2000").assertCountEquals(1)
-        composeTestRule.onAllNodesWithText("createdAtEpochMillis: 2000").assertCountEquals(1)
+        composeTestRule.onAllNodesWithTag(ShotHistoryScreenTestTags.DETAIL_REPORT).assertCountEquals(1)
+        composeTestRule.onAllNodesWithTag(ShotHistoryScreenTestTags.DETAIL_MAIN_SUMMARY).assertCountEquals(1)
+        composeTestRule.onAllNodesWithTag(ShotHistoryScreenTestTags.DETAIL_TIMING_TARGET).assertCountEquals(1)
+        composeTestRule.onAllNodesWithTag(ShotHistoryScreenTestTags.DETAIL_DATA_CONFIDENCE).assertCountEquals(1)
         composeTestRule.onAllNodesWithText("Source: Decent Scale").assertCountEquals(1)
-        composeTestRule.onAllNodesWithText("Quality: Complete").assertCountEquals(1)
+        composeTestRule.onAllNodesWithText("Data status: Complete").assertCountEquals(1)
         composeTestRule.onAllNodesWithText("Yield: 36.8 g").assertCountEquals(1)
         composeTestRule.onAllNodesWithText("Flow time: 28 s").assertCountEquals(1)
         composeTestRule.onAllNodesWithText("Average flow: 1.3 g/s").assertCountEquals(1)
-        composeTestRule.onAllNodesWithText("Samples: 4").assertCountEquals(1)
+        composeTestRule.onAllNodesWithText("Weight readings: 4").assertCountEquals(1)
         composeTestRule.onAllNodesWithText("Dose: 18.0 g").assertCountEquals(1)
         composeTestRule.onAllNodesWithText("Target: 36.0 g").assertCountEquals(1)
+        composeTestRule.onAllNodesWithText("Ratio: 1:2").assertCountEquals(1)
         composeTestRule.onAllNodesWithText("Target reached: yes").assertCountEquals(1)
-        composeTestRule.onAllNodesWithText("Raw JSON / debug detail").assertCountEquals(1)
-        composeTestRule.onAllNodesWithTag(ShotHistoryScreenTestTags.RAW_JSON).assertCountEquals(1)
-        composeTestRule.onAllNodesWithText(json).assertCountEquals(1)
+        composeTestRule.onAllNodesWithTag(ShotHistoryScreenTestTags.RAW_JSON_TOGGLE).assertCountEquals(1)
+        composeTestRule.onAllNodesWithTag(ShotHistoryScreenTestTags.RAW_JSON).assertCountEquals(0)
+        composeTestRule.onAllNodesWithText(json).assertCountEquals(0)
     }
 
     private fun setHistoryContent(items: List<ShotHistoryItem>) {

@@ -18,12 +18,12 @@ class ShotHistoryStateMapperTest {
                     ShotHistoryItem(
                         id = "shot-1",
                         createdAtEpochMillis = 1_000L,
-                        qualityLabel = "Quality: Missing target"
+                        qualityLabel = "Data status: Missing target"
                     ),
                     ShotHistoryItem(
                         id = "shot-2",
                         createdAtEpochMillis = 2_000L,
-                        qualityLabel = "Quality: Missing target"
+                        qualityLabel = "Data status: Missing target"
                     )
                 )
             ),
@@ -66,7 +66,7 @@ class ShotHistoryStateMapperTest {
                 id = "shot-2",
                 createdAtEpochMillis = 2_000L,
                 json = json,
-                qualityLabel = "Quality: Missing target"
+                qualityLabel = "Data status: Missing target"
             ),
             ShotHistoryStateMapper.fromEntities(
                 entities = entities,
@@ -82,7 +82,7 @@ class ShotHistoryStateMapperTest {
               "schemaVersion": 1,
               "shot": {
                 "metadata": { "scaleSource": "DECENT_SCALE" },
-                "target": { "doseG": 18.0, "targetYieldG": 36.0 },
+                "target": { "doseG": 18.0, "targetYieldG": 36.0, "targetRatio": 2.0 },
                 "timing": {
                   "flowTimeMs": 28000,
                   "targetReachedAtMs": 24000
@@ -106,12 +106,13 @@ class ShotHistoryStateMapperTest {
                 createdAtEpochMillis = 1_000L,
                 json = json,
                 sourceLabel = "Source: Decent Scale",
-                qualityLabel = "Quality: Complete",
+                qualityLabel = "Data status: Complete",
                 finalYieldLabel = "Yield: 37.2 g",
                 flowTimeLabel = "Flow time: 28 s",
-                sampleCountLabel = "Samples: 4",
+                sampleCountLabel = "Weight readings: 4",
                 doseLabel = "Dose: 18.0 g",
                 targetYieldLabel = "Target: 36.0 g",
+                ratioLabel = "Ratio: 1:2",
                 averageFlowLabel = "Average flow: 1.3 g/s",
                 targetReachedLabel = "Target reached: yes"
             ),

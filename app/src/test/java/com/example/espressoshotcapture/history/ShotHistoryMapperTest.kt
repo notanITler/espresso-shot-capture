@@ -30,7 +30,7 @@ class ShotHistoryMapperTest {
                   "schemaVersion": 1,
                   "shot": {
                     "metadata": { "scaleSource": "FAKE_DEMO" },
-                    "target": { "doseG": 18.0, "targetYieldG": 36.0 },
+                    "target": { "doseG": 18.0, "targetYieldG": 36.0, "targetRatio": 2.0 },
                     "timing": { "flowTimeMs": 28000 },
                     "result": { "actualYieldG": 36.8, "sampleCount": 3 },
                     "samples": [{}, {}, {}]
@@ -45,12 +45,13 @@ class ShotHistoryMapperTest {
                 id = "shot-1",
                 createdAtEpochMillis = 1_000L,
                 sourceLabel = "Source: Fake/demo",
-                qualityLabel = "Quality: Complete",
+                qualityLabel = "Data status: Complete",
                 finalYieldLabel = "Yield: 36.8 g",
                 flowTimeLabel = "Flow time: 28 s",
-                sampleCountLabel = "Samples: 3",
+                sampleCountLabel = "Weight readings: 3",
                 doseLabel = "Dose: 18.0 g",
-                targetYieldLabel = "Target: 36.0 g"
+                targetYieldLabel = "Target: 36.0 g",
+                ratioLabel = "Ratio: 1:2"
             ),
             ShotHistoryMapper.fromEntity(entity)
         )
@@ -64,7 +65,7 @@ class ShotHistoryMapperTest {
                   "schemaVersion": 1,
                   "shot": {
                     "metadata": { "scaleSource": "DECENT_SCALE" },
-                    "target": { "doseG": 18.0, "targetYieldG": 36.0 },
+                    "target": { "doseG": 18.0, "targetYieldG": 36.0, "targetRatio": 2.0 },
                     "timing": {
                       "flowTimeMs": 28000,
                       "targetReachedAtMs": 24000
@@ -81,13 +82,14 @@ class ShotHistoryMapperTest {
         )
 
         assertEquals("Source: Decent Scale", summary.sourceLabel)
-        assertEquals("Quality: Complete", summary.qualityLabel)
+        assertEquals("Data status: Complete", summary.qualityLabel)
         assertEquals("Yield: 37.2 g", summary.finalYieldLabel)
         assertEquals("Flow time: 28 s", summary.flowTimeLabel)
         assertEquals("Average flow: 1.3 g/s", summary.averageFlowLabel)
-        assertEquals("Samples: 4", summary.sampleCountLabel)
+        assertEquals("Weight readings: 4", summary.sampleCountLabel)
         assertEquals("Dose: 18.0 g", summary.doseLabel)
         assertEquals("Target: 36.0 g", summary.targetYieldLabel)
+        assertEquals("Ratio: 1:2", summary.ratioLabel)
         assertEquals("Target reached: yes", summary.targetReachedLabel)
     }
 
@@ -107,7 +109,7 @@ class ShotHistoryMapperTest {
             """.trimIndent()
         )
 
-        assertEquals("Quality: No samples", summary.qualityLabel)
+        assertEquals("Data status: No readings", summary.qualityLabel)
     }
 
     @Test
@@ -126,7 +128,7 @@ class ShotHistoryMapperTest {
             """.trimIndent()
         )
 
-        assertEquals("Quality: Zero flow time", summary.qualityLabel)
+        assertEquals("Data status: Zero flow time", summary.qualityLabel)
     }
 
     @Test
@@ -144,7 +146,7 @@ class ShotHistoryMapperTest {
             """.trimIndent()
         )
 
-        assertEquals("Quality: Missing target", summary.qualityLabel)
+        assertEquals("Data status: Missing target", summary.qualityLabel)
     }
 
     @Test
@@ -251,7 +253,7 @@ class ShotHistoryMapperTest {
                 createdAtEpochMillis = 1_000L,
                 finalYieldLabel = "Yield: --",
                 flowTimeLabel = "Flow time: --",
-                qualityLabel = "Quality: Missing target",
+                qualityLabel = "Data status: Missing target",
                 targetYieldLabel = "Target: --"
             ),
             ShotHistoryMapper.fromEntity(entity)

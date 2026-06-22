@@ -15,12 +15,13 @@ object ShotHistoryMapper {
     const val UNKNOWN_YIELD_LABEL: String = "Yield: --"
     const val UNKNOWN_FLOW_TIME_LABEL: String = "Flow time: --"
     const val UNKNOWN_TARGET_YIELD_LABEL: String = "Target: --"
+    const val UNKNOWN_RATIO_LABEL: String = "Ratio: --"
     const val UNKNOWN_AVERAGE_FLOW_LABEL: String = "Average flow: --"
     const val UNKNOWN_TARGET_REACHED_LABEL: String = "Target reached: --"
     const val UNKNOWN_SOURCE_LABEL: String = "Source: --"
-    const val UNKNOWN_SAMPLE_COUNT_LABEL: String = "Samples: --"
+    const val UNKNOWN_SAMPLE_COUNT_LABEL: String = "Weight readings: --"
     const val UNKNOWN_DOSE_LABEL: String = "Dose: --"
-    const val UNKNOWN_QUALITY_LABEL: String = "Quality: --"
+    const val UNKNOWN_QUALITY_LABEL: String = "Data status: --"
 
     fun fromEntity(entity: ShotEntity): ShotHistoryItem =
         summaryFromJson(entity.json).let { summary ->
@@ -34,7 +35,8 @@ object ShotHistoryMapper {
                 averageFlowLabel = summary.averageFlowLabel,
                 sampleCountLabel = summary.sampleCountLabel,
                 doseLabel = summary.doseLabel,
-                targetYieldLabel = summary.targetYieldLabel
+                targetYieldLabel = summary.targetYieldLabel,
+                ratioLabel = summary.ratioLabel
             )
         }
 
@@ -59,6 +61,7 @@ object ShotHistoryMapper {
         val flowTimeMs = timing?.longAt("flowTimeMs")
         val doseG = target?.doubleAt("doseG")
         val targetYieldG = target?.doubleAt("targetYieldG")
+        val targetRatio = target?.doubleAt("targetRatio")
         val averageFlowGPerS = result?.doubleAt("averageFlowGPerS")
         val sampleCount = result?.longAt("sampleCount") ?: samples?.size?.toLong()
         val targetReachedLabel = timing?.let { timingObject ->
@@ -78,10 +81,10 @@ object ShotHistoryMapper {
             else -> UNKNOWN_SOURCE_LABEL
         }
         val qualityLabel = when {
-            sampleCount == 0L -> "Quality: No samples"
-            flowTimeMs == 0L -> "Quality: Zero flow time"
-            target == null || doseG == null || targetYieldG == null -> "Quality: Missing target"
-            sampleCount != null && flowTimeMs != null -> "Quality: Complete"
+            sampleCount == 0L -> "Data status: No readings"
+            flowTimeMs == 0L -> "Data status: Zero flow time"
+            target == null || doseG == null || targetYieldG == null -> "Data status: Missing target"
+            sampleCount != null && flowTimeMs != null -> "Data status: Complete"
             else -> UNKNOWN_QUALITY_LABEL
         }
 
@@ -92,12 +95,14 @@ object ShotHistoryMapper {
                 ?: UNKNOWN_YIELD_LABEL,
             flowTimeLabel = flowTimeMs?.let { timeMs -> "Flow time: ${timeMs / 1_000L} s" }
                 ?: UNKNOWN_FLOW_TIME_LABEL,
-            sampleCountLabel = sampleCount?.let { count -> "Samples: $count" }
+            sampleCountLabel = sampleCount?.let { count -> "Weight readings: $count" }
                 ?: UNKNOWN_SAMPLE_COUNT_LABEL,
             doseLabel = doseG?.let { dose -> "Dose: ${dose.toOneDecimal()} g" }
                 ?: UNKNOWN_DOSE_LABEL,
             targetYieldLabel = targetYieldG?.let { target -> "Target: ${target.toOneDecimal()} g" }
                 ?: UNKNOWN_TARGET_YIELD_LABEL,
+            ratioLabel = targetRatio?.let { ratio -> "Ratio: 1:${ratio.toRatioText()}" }
+                ?: UNKNOWN_RATIO_LABEL,
             averageFlowLabel = averageFlowGPerS?.let { flow -> "Average flow: ${flow.toOneDecimal()} g/s" }
                 ?: UNKNOWN_AVERAGE_FLOW_LABEL,
             targetReachedLabel = targetReachedLabel
@@ -112,6 +117,7 @@ object ShotHistoryMapper {
         val sampleCountLabel: String = UNKNOWN_SAMPLE_COUNT_LABEL,
         val doseLabel: String = UNKNOWN_DOSE_LABEL,
         val targetYieldLabel: String = UNKNOWN_TARGET_YIELD_LABEL,
+        val ratioLabel: String = UNKNOWN_RATIO_LABEL,
         val averageFlowLabel: String = UNKNOWN_AVERAGE_FLOW_LABEL,
         val targetReachedLabel: String = UNKNOWN_TARGET_REACHED_LABEL
     )
@@ -133,4 +139,13 @@ object ShotHistoryMapper {
 
     private fun Double.toOneDecimal(): String =
         ((this * 10.0).roundToInt() / 10.0).toString()
+
+    private fun Double.toRatioText(): String {
+        val rounded = (this * 10.0).roundToInt() / 10.0
+        return if (rounded % 1.0 == 0.0) {
+            rounded.toInt().toString()
+        } else {
+            rounded.toString()
+        }
+    }
 }

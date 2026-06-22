@@ -60,17 +60,17 @@ class ShotHistoryViewModelTest {
                     ShotHistoryItem(
                         id = "shot-3",
                         createdAtEpochMillis = 3_000L,
-                        qualityLabel = "Quality: Missing target"
+                        qualityLabel = "Data status: Missing target"
                     ),
                     ShotHistoryItem(
                         id = "shot-2",
                         createdAtEpochMillis = 2_000L,
-                        qualityLabel = "Quality: Missing target"
+                        qualityLabel = "Data status: Missing target"
                     ),
                     ShotHistoryItem(
                         id = "shot-1",
                         createdAtEpochMillis = 1_000L,
-                        qualityLabel = "Quality: Missing target"
+                        qualityLabel = "Data status: Missing target"
                     )
                 )
             ),
@@ -100,7 +100,7 @@ class ShotHistoryViewModelTest {
                 id = "shot-2",
                 createdAtEpochMillis = 2_000L,
                 json = json,
-                qualityLabel = "Quality: Missing target"
+                qualityLabel = "Data status: Missing target"
             ),
             uiState.selectedShotDetail
         )

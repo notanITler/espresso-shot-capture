@@ -27,6 +27,7 @@ object ShotHistoryStateMapper {
                 sampleCountLabel = summary.sampleCountLabel,
                 doseLabel = summary.doseLabel,
                 targetYieldLabel = summary.targetYieldLabel,
+                ratioLabel = summary.ratioLabel,
                 averageFlowLabel = summary.averageFlowLabel,
                 targetReachedLabel = summary.targetReachedLabel
             )

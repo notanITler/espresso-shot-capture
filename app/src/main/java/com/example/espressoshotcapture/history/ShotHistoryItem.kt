@@ -10,5 +10,6 @@ data class ShotHistoryItem(
     val averageFlowLabel: String = ShotHistoryMapper.UNKNOWN_AVERAGE_FLOW_LABEL,
     val sampleCountLabel: String = ShotHistoryMapper.UNKNOWN_SAMPLE_COUNT_LABEL,
     val doseLabel: String = ShotHistoryMapper.UNKNOWN_DOSE_LABEL,
-    val targetYieldLabel: String = ShotHistoryMapper.UNKNOWN_TARGET_YIELD_LABEL
+    val targetYieldLabel: String = ShotHistoryMapper.UNKNOWN_TARGET_YIELD_LABEL,
+    val ratioLabel: String = ShotHistoryMapper.UNKNOWN_RATIO_LABEL
 )

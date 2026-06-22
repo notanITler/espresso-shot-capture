@@ -27,19 +27,23 @@ fun SectionContainer(
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 6.dp)
             .background(
-                color = Color(0xFFF8F8F8),
+                color = Color(0xFF171A1E),
                 shape = RoundedCornerShape(8.dp)
             )
             .border(
                 width = 1.dp,
-                color = Color(0xFFE0E0E0),
+                color = Color(0xFF30363D),
                 shape = RoundedCornerShape(8.dp)
             )
             .padding(12.dp)
     ) {
         BasicText(
             text = title,
-            style = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            style = TextStyle(
+                color = Color(0xFFF6F7F9),
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold
+            )
         )
         content()
     }
