@@ -60,23 +60,23 @@ fun CaptureScreen(
                 color = Color(0xFF30363D),
                 shape = RoundedCornerShape(8.dp)
             )
-            .padding(16.dp)
+            .padding(12.dp)
     ) {
         BasicText(
             text = "Espresso Shot Capture",
             style = TextStyle(
                 color = Color(0xFFF6F7F9),
-                fontSize = 22.sp,
+                fontSize = 20.sp,
                 fontWeight = FontWeight.SemiBold
             )
         )
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         BasicText(
             text = "Scale / source",
             style = captureSectionLabelStyle()
         )
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(2.dp))
         BasicText(
             text = uiState.scaleConnectionLabel,
             style = captureBodyStyle()
@@ -87,7 +87,7 @@ fun CaptureScreen(
                 style = captureMutedStyle()
             )
         }
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(6.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -122,19 +122,19 @@ fun CaptureScreen(
                 style = captureWarningStyle()
             )
         }
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
         BasicText(
             text = "Dose / target / ratio",
             style = captureSectionLabelStyle()
         )
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(6.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             TargetInput(
-                label = "Dose in grams",
+                label = "Dose g",
                 value = targetState.doseInputValue,
                 onValueChange = onDoseChanged,
                 testTag = CaptureScreenTestTags.DOSE_INPUT,
@@ -142,39 +142,40 @@ fun CaptureScreen(
                     .weight(1f)
             )
             TargetInput(
-                label = "Target yield in grams",
+                label = "Yield g",
                 value = targetState.targetYieldInputValue,
                 onValueChange = onTargetYieldChanged,
                 testTag = CaptureScreenTestTags.TARGET_YIELD_INPUT,
                 modifier = Modifier
                     .weight(1f)
             )
+            RatioMetric(
+                text = targetState.ratioLabel,
+                modifier = Modifier
+                    .weight(1f)
+                    .testTag(CaptureScreenTestTags.RATIO_DISPLAY)
+            )
         }
-        Spacer(modifier = Modifier.height(6.dp))
-        BasicText(
-            text = targetState.ratioLabel,
-            modifier = Modifier.testTag(CaptureScreenTestTags.RATIO_DISPLAY),
-            style = captureBodyStyle()
-        )
         targetState.validationMessage?.let { validationMessage ->
+            Spacer(modifier = Modifier.height(4.dp))
             BasicText(
                 text = validationMessage,
                 modifier = Modifier.testTag(CaptureScreenTestTags.VALIDATION_MESSAGE),
                 style = captureWarningStyle()
             )
         }
-        Spacer(modifier = Modifier.height(18.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
         BasicText(
             text = "Live shot values",
             style = captureSectionLabelStyle()
         )
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(4.dp))
         LargeMetric(
             text = uiState.currentWeightLabel ?: "Weight: 0.0 g",
             modifier = Modifier.testTag(CaptureScreenTestTags.RECORDING_WEIGHT)
         )
-        Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(4.dp))
         BasicText(
             text = uiState.progressLabel,
             modifier = Modifier.testTag(CaptureScreenTestTags.RECORDING_PROGRESS),
@@ -185,10 +186,10 @@ fun CaptureScreen(
             modifier = Modifier.testTag(CaptureScreenTestTags.TARGET_REACHED),
             style = captureMutedStyle()
         )
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(6.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             SupportingMetric(
                 text = uiState.captureElapsedLabel ?: "Capture elapsed: 0 s",
@@ -203,23 +204,23 @@ fun CaptureScreen(
                     .testTag(CaptureScreenTestTags.RECORDING_AVERAGE_FLOW)
             )
         }
-        Spacer(modifier = Modifier.height(18.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
         BasicText(
             text = "Shot state",
             style = captureSectionLabelStyle()
         )
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(2.dp))
         BasicText(
             text = uiState.shotStatusLabel,
             modifier = Modifier.testTag(CaptureScreenTestTags.STATUS),
             style = TextStyle(
                 color = Color(0xFFF6F7F9),
-                fontSize = 18.sp,
+                fontSize = 16.sp,
                 fontWeight = FontWeight.SemiBold
             )
         )
-        Spacer(modifier = Modifier.height(14.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         StableActionArea(
             primaryActionLabel = uiState.primaryActionLabel,
@@ -250,7 +251,7 @@ private fun SourcePill(
                 color = if (selected) Color(0xFF68D391) else Color(0xFF3A414A),
                 shape = RoundedCornerShape(6.dp)
             )
-            .padding(horizontal = 10.dp, vertical = 8.dp)
+            .padding(horizontal = 8.dp, vertical = 6.dp)
     ) {
         BasicText(
             text = text,
@@ -276,14 +277,14 @@ private fun TargetInput(
             text = label,
             style = captureMutedStyle()
         )
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(3.dp))
         BasicTextField(
             value = value,
             onValueChange = onValueChange,
             singleLine = true,
             textStyle = TextStyle(
                 color = Color(0xFFF6F7F9),
-                fontSize = 18.sp,
+                fontSize = 16.sp,
                 fontWeight = FontWeight.SemiBold
             ),
             modifier = Modifier
@@ -298,7 +299,41 @@ private fun TargetInput(
                     color = Color(0xFF3A414A),
                     shape = RoundedCornerShape(6.dp)
                 )
-                .padding(horizontal = 10.dp, vertical = 8.dp)
+                .padding(horizontal = 8.dp, vertical = 6.dp)
+        )
+    }
+}
+
+@Composable
+private fun RatioMetric(
+    text: String,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier.semantics(mergeDescendants = true) {}) {
+        BasicText(
+            text = "Ratio",
+            style = captureMutedStyle()
+        )
+        Spacer(modifier = Modifier.height(3.dp))
+        BasicText(
+            text = text,
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    color = Color(0xFF20242A),
+                    shape = RoundedCornerShape(6.dp)
+                )
+                .border(
+                    width = 1.dp,
+                    color = Color(0xFF3A414A),
+                    shape = RoundedCornerShape(6.dp)
+                )
+                .padding(horizontal = 8.dp, vertical = 6.dp),
+            style = TextStyle(
+                color = Color(0xFFE6EBF0),
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold
+            )
         )
     }
 }
@@ -313,7 +348,7 @@ private fun LargeMetric(
         modifier = modifier,
         style = TextStyle(
             color = Color(0xFFFFFFFF),
-            fontSize = 34.sp,
+            fontSize = 30.sp,
             fontWeight = FontWeight.Bold
         )
     )
@@ -331,10 +366,10 @@ private fun SupportingMetric(
                 color = Color(0xFF20242A),
                 shape = RoundedCornerShape(6.dp)
             )
-            .padding(10.dp),
+            .padding(8.dp),
         style = TextStyle(
             color = Color(0xFFE6EBF0),
-            fontSize = 14.sp,
+            fontSize = 13.sp,
             fontWeight = FontWeight.SemiBold
         )
     )
@@ -358,7 +393,7 @@ private fun ActionPill(
                 color = if (enabled) Color(0xFFF7D66F) else Color(0xFF3A414A),
                 shape = RoundedCornerShape(6.dp)
             )
-            .padding(horizontal = 12.dp, vertical = 12.dp),
+            .padding(horizontal = 10.dp, vertical = 10.dp),
         style = TextStyle(
             color = if (enabled) Color(0xFF181A1D) else Color(0xFF6F7782),
             fontSize = 16.sp,
@@ -376,14 +411,9 @@ private fun StableActionArea(
     onPrimaryAction: () -> Unit,
     onTare: () -> Unit
 ) {
-    BasicText(
-        text = "Actions",
-        style = captureSectionLabelStyle()
-    )
-    Spacer(modifier = Modifier.height(8.dp))
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         ActionPill(
             text = "Tare",
@@ -418,7 +448,7 @@ private fun StableActionArea(
         text = statusLabel ?: " ",
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 6.dp)
+            .padding(top = 4.dp)
             .testTag(CaptureScreenTestTags.ACTION_STATUS),
         style = captureMutedStyle()
     )
