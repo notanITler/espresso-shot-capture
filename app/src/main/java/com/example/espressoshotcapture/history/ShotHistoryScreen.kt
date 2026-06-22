@@ -27,7 +27,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.espressoshotcapture.EspressoShotCaptureApplication
 import com.example.espressoshotcapture.ui.SectionContainer
 
-private const val MAX_VISIBLE_HISTORY_ROWS = 5
+private const val MAX_VISIBLE_HISTORY_ROWS = 3
 
 @Composable
 fun ShotHistoryRoute(
@@ -92,7 +92,7 @@ fun ShotHistoryScreen(
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(max = 280.dp)
+                        .heightIn(max = 180.dp)
                         .testTag(ShotHistoryScreenTestTags.HISTORY_LIST)
                 ) {
                     items(items = visibleItems, key = { item -> item.id }) { item ->
@@ -134,17 +134,17 @@ private fun ShotHistoryRow(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .padding(horizontal = 12.dp, vertical = 6.dp)
     ) {
-        BasicText(text = item.id)
         BasicText(
-            text = "${item.sourceLabel}  |  ${item.qualityLabel}"
+            text = "${item.sourceLabel}  |  ${item.finalYieldLabel}",
+            style = TextStyle(fontWeight = FontWeight.SemiBold)
         )
         BasicText(
-            text = "${item.finalYieldLabel}  |  ${item.flowTimeLabel}  |  ${item.sampleCountLabel}"
+            text = "${item.flowTimeLabel}  |  ${item.sampleCountLabel}  |  ${item.qualityLabel}"
         )
         BasicText(
-            text = "${item.doseLabel}  |  ${item.targetYieldLabel}"
+            text = "Created: ${item.createdAtEpochMillis}"
         )
     }
 }

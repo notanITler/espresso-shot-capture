@@ -51,17 +51,16 @@ class ShotHistoryScreenTest {
             )
         )
 
-        composeTestRule.onNodeWithText("shot-1000").assertIsDisplayed()
         composeTestRule.onNodeWithText(
-            "Source: Fake/demo  |  Quality: Complete"
+            "Source: Fake/demo  |  Yield: 36.8 g"
         ).assertIsDisplayed()
         composeTestRule.onNodeWithText(
-            "Yield: 36.8 g  |  Flow time: 28 s  |  Samples: 3"
+            "Flow time: 28 s  |  Samples: 3  |  Quality: Complete"
         ).assertIsDisplayed()
         composeTestRule.onNodeWithText(
-            "Dose: 18.0 g  |  Target: 36.0 g"
+            "Created: 1000"
         ).assertIsDisplayed()
-        composeTestRule.onNodeWithText("shot-2000").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Source: --  |  Yield: --").assertIsDisplayed()
     }
 
     @Test
@@ -70,17 +69,30 @@ class ShotHistoryScreenTest {
             ShotHistoryScreen(
                 uiState = ShotHistoryUiState(
                     items = listOf(
-                        ShotHistoryItem(id = "shot-3000", createdAtEpochMillis = 3_000L)
+                        ShotHistoryItem(
+                            id = "shot-3000",
+                            createdAtEpochMillis = 3_000L,
+                            sourceLabel = "Source: Decent Scale",
+                            finalYieldLabel = "Yield: 37.1 g",
+                            flowTimeLabel = "Flow time: 29 s",
+                            sampleCountLabel = "Samples: 12",
+                            qualityLabel = "Quality: Complete"
+                        )
                     )
                 )
             )
         }
 
-        composeTestRule.onNodeWithText("shot-3000").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Source: Decent Scale  |  Yield: 37.1 g").assertIsDisplayed()
+        composeTestRule.onNodeWithText(
+            "Flow time: 29 s  |  Samples: 12  |  Quality: Complete"
+        ).assertIsDisplayed()
+        composeTestRule.onNodeWithText("Created: 3000").assertIsDisplayed()
+        composeTestRule.onAllNodesWithText("Raw JSON / debug detail").assertCountEquals(0)
     }
 
     @Test
-    fun longHistoryOnlyShowsNewestFiveRows() {
+    fun longHistoryOnlyShowsNewestThreeRows() {
         setHistoryContent(
             items = listOf(
                 ShotHistoryItem(id = "shot-6", createdAtEpochMillis = 6_000L),
@@ -92,12 +104,12 @@ class ShotHistoryScreenTest {
             )
         )
 
-        composeTestRule.onNodeWithText("shot-6").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Created: 6000").assertIsDisplayed()
         composeTestRule
             .onNodeWithTag(ShotHistoryScreenTestTags.HISTORY_LIST)
-            .performScrollToNode(hasText("shot-2"))
-        composeTestRule.onNodeWithText("shot-2").assertIsDisplayed()
-        composeTestRule.onAllNodesWithText("shot-1").assertCountEquals(0)
+            .performScrollToNode(hasText("Created: 4000"))
+        composeTestRule.onNodeWithText("Created: 4000").assertIsDisplayed()
+        composeTestRule.onAllNodesWithText("Created: 3000").assertCountEquals(0)
     }
 
     @Test
@@ -132,7 +144,7 @@ class ShotHistoryScreenTest {
             )
         }
 
-        composeTestRule.onNodeWithText("shot-2000").performClick()
+        composeTestRule.onNodeWithText("Created: 2000").performClick()
 
         composeTestRule.onNodeWithText("Selected Shot Detail").assertIsDisplayed()
         composeTestRule.onAllNodesWithTag(ShotHistoryScreenTestTags.SELECTED_DETAIL).assertCountEquals(1)

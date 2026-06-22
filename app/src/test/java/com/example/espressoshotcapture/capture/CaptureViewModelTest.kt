@@ -129,6 +129,8 @@ class CaptureViewModelTest {
 
         viewModel.selectDecentScaleSource()
         runCurrent()
+        realScaleClient.emitConnectionState(ScaleConnectionState.Connected)
+        runCurrent()
 
         assertEquals("Scale: Connected", viewModel.uiState.value.scaleConnectionLabel)
         assertEquals(
@@ -142,6 +144,68 @@ class CaptureViewModelTest {
 
         assertEquals(
             "Capture source: Decent Scale/real ready",
+            viewModel.uiState.value.captureSourceStatusLabel
+        )
+        assertTrue(viewModel.uiState.value.isPrimaryActionEnabled)
+    }
+
+    @Test
+    fun realScaleAutoSelectsAfterConnectedLiveReading() = runTest(testDispatcher) {
+        val selectedCandidate = MutableStateFlow(expectedScaleCandidate())
+        val realScaleClient = TestScaleClient()
+        viewModel = CaptureViewModel(
+            shotRepository = ShotRepository(dao),
+            scaleClient = scaleClient,
+            selectedDecentScaleCandidate = selectedCandidate,
+            createDecentScaleClient = { realScaleClient },
+            saveDispatcher = testDispatcher,
+            currentTimeMillis = { 123_456L },
+            savedConfirmationDelayMs = 1_000L
+        )
+        runCurrent()
+
+        assertEquals(CaptureScaleSource.FAKE, viewModel.uiState.value.selectedScaleSource)
+
+        realScaleClient.emitConnectionState(ScaleConnectionState.Connected)
+        realScaleClient.emitReading(ScaleReading(timestampMillis = 0L, weightGrams = 0.0))
+        runCurrent()
+
+        assertEquals(CaptureScaleSource.DECENT, viewModel.uiState.value.selectedScaleSource)
+        assertEquals(
+            "Capture source: Decent Scale/real ready",
+            viewModel.uiState.value.captureSourceStatusLabel
+        )
+        assertTrue(viewModel.uiState.value.isPrimaryActionEnabled)
+    }
+
+    @Test
+    fun manualFakeSelectionStaysFakeAfterRealScaleAutoSelection() = runTest(testDispatcher) {
+        val selectedCandidate = MutableStateFlow(expectedScaleCandidate())
+        val realScaleClient = TestScaleClient()
+        viewModel = CaptureViewModel(
+            shotRepository = ShotRepository(dao),
+            scaleClient = scaleClient,
+            selectedDecentScaleCandidate = selectedCandidate,
+            createDecentScaleClient = { realScaleClient },
+            saveDispatcher = testDispatcher,
+            currentTimeMillis = { 123_456L },
+            savedConfirmationDelayMs = 1_000L
+        )
+        runCurrent()
+
+        realScaleClient.emitConnectionState(ScaleConnectionState.Connected)
+        realScaleClient.emitReading(ScaleReading(timestampMillis = 0L, weightGrams = 0.0))
+        runCurrent()
+        assertEquals(CaptureScaleSource.DECENT, viewModel.uiState.value.selectedScaleSource)
+
+        viewModel.selectFakeScaleSource()
+        runCurrent()
+        realScaleClient.emitReading(ScaleReading(timestampMillis = 100L, weightGrams = 0.1))
+        runCurrent()
+
+        assertEquals(CaptureScaleSource.FAKE, viewModel.uiState.value.selectedScaleSource)
+        assertEquals(
+            "Capture source: Fake scale/demo",
             viewModel.uiState.value.captureSourceStatusLabel
         )
         assertTrue(viewModel.uiState.value.isPrimaryActionEnabled)
@@ -163,6 +227,8 @@ class CaptureViewModelTest {
         runCurrent()
 
         viewModel.selectDecentScaleSource()
+        runCurrent()
+        realScaleClient.emitConnectionState(ScaleConnectionState.Connected)
         runCurrent()
         realScaleClient.emitReading(ScaleReading(timestampMillis = 0L, weightGrams = 0.0))
         runCurrent()

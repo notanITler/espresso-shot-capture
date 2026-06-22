@@ -2,6 +2,7 @@ package com.example.espressoshotcapture
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.background
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -10,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.espressoshotcapture.ble.BleScaleScanRoute
+import com.example.espressoshotcapture.ble.ScaleConnectionRoute
 import com.example.espressoshotcapture.capture.CaptureRoute
 import com.example.espressoshotcapture.capture.CaptureScreen
 
@@ -21,8 +23,10 @@ fun EspressoShotCaptureApp(
         modifier = modifier
             .fillMaxSize()
             .background(Color(0xFF101214))
+            .safeDrawingPadding()
             .verticalScroll(rememberScrollState())
     ) {
+        ScaleConnectionRoute()
         CaptureRoute()
         com.example.espressoshotcapture.history.ShotHistoryRoute()
         BleScaleScanRoute()

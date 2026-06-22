@@ -41,7 +41,7 @@ class CaptureViewModel(
     private val createDecentScaleClient: (BleScaleScanCandidate) -> ScaleClient = { scaleClient },
     private val saveDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val currentTimeMillis: () -> Long = System::currentTimeMillis,
-private val savedConfirmationDelayMs: Long = 3_000L
+    private val savedConfirmationDelayMs: Long = 3_000L
 ) : ViewModel() {
     private var selectedScaleSource: CaptureScaleSource = CaptureScaleSource.FAKE
     private val _uiState = MutableStateFlow(
@@ -58,10 +58,14 @@ private val savedConfirmationDelayMs: Long = 3_000L
     private var lastCaptureSessionStartedAtEpochMs: Long? = null
     private var activeShotScaleSource: ShotScaleSource = ShotScaleSource.FAKE_DEMO
     private var activeScaleClient: ScaleClient = scaleClient
+    private var realScaleClient: ScaleClient? = null
     private var latestDecentScaleCandidate: BleScaleScanCandidate? = selectedDecentScaleCandidate.value
     private var activeScaleConnectionState: ScaleConnectionState = ScaleConnectionState.Disconnected
+    private var realScaleConnectionState: ScaleConnectionState = ScaleConnectionState.Disconnected
     private var realScaleHasReading: Boolean = false
+    private var suppressRealSourceAutoSelect: Boolean = false
     private var scaleConnectionJob: Job? = null
+    private var realScaleConnectionJob: Job? = null
     private var realScaleReadinessJob: Job? = null
     private var realScaleFreshnessJob: Job? = null
     private var activeCaptureTarget: CaptureTarget = requireNotNull(
@@ -72,15 +76,20 @@ private val savedConfirmationDelayMs: Long = 3_000L
     init {
         viewModelScope.launch {
             selectedDecentScaleCandidate.collect { candidate ->
+                val previousCandidate = latestDecentScaleCandidate
                 latestDecentScaleCandidate = candidate
-                if (selectedScaleSource == CaptureScaleSource.DECENT && _uiState.value.status == CaptureStatus.READY) {
+                if (candidate != previousCandidate) {
+                    suppressRealSourceAutoSelect = false
+                    realScaleClient = null
+                }
+                if (_uiState.value.status == CaptureStatus.READY) {
                     activateDecentScaleClient(candidate)
                 } else {
                     updateCaptureSourceState()
                 }
             }
         }
-        selectFakeScaleSource()
+        selectFakeScaleSource(isManualSelection = false)
     }
 
     fun onPrimaryAction() {
@@ -92,16 +101,22 @@ private val savedConfirmationDelayMs: Long = 3_000L
     }
 
     fun selectFakeScaleSource() {
+        selectFakeScaleSource(isManualSelection = true)
+    }
+
+    private fun selectFakeScaleSource(isManualSelection: Boolean) {
         if (_uiState.value.status != CaptureStatus.READY) return
+        if (isManualSelection && realScaleHasReading) {
+            suppressRealSourceAutoSelect = true
+        }
         selectedScaleSource = CaptureScaleSource.FAKE
-        realScaleHasReading = false
-        activateScaleClient(scaleClient)
+        activateFakeScaleClient()
     }
 
     fun selectDecentScaleSource() {
         if (_uiState.value.status != CaptureStatus.READY) return
+        suppressRealSourceAutoSelect = false
         selectedScaleSource = CaptureScaleSource.DECENT
-        realScaleHasReading = false
         activateDecentScaleClient(latestDecentScaleCandidate)
     }
 
@@ -134,6 +149,10 @@ private val savedConfirmationDelayMs: Long = 3_000L
         }
         val captureTarget = _targetState.value.toCaptureTargetOrNull() ?: return
         activeCaptureTarget = captureTarget
+        activeScaleClient = when (selectedScaleSource) {
+            CaptureScaleSource.FAKE -> scaleClient
+            CaptureScaleSource.DECENT -> realScaleClient ?: scaleClient
+        }
         recordingStartTimestampMs = null
         firstScaleReadingTimestampMs = null
         captureSessionStartedAtEpochMs = nextCaptureSessionStartedAtMs()
@@ -236,9 +255,9 @@ private val savedConfirmationDelayMs: Long = 3_000L
     private fun Double.toOneDecimal(): String =
         ((this * 10.0).roundToInt() / 10.0).toString()
 
-    private fun updateScaleConnectionLabel(scaleConnectionLabel: String) {
+    private fun updateScaleConnectionLabel() {
         _uiState.value = _uiState.value.copy(
-            scaleConnectionLabel = scaleConnectionLabel,
+            scaleConnectionLabel = currentScaleConnectionLabel(),
             scaleModeLabel = scaleModeLabelForSource(),
             captureSourceStatusLabel = captureSourceStatusLabel(),
             captureSourceMessage = captureSourceMessage()
@@ -260,63 +279,90 @@ private val savedConfirmationDelayMs: Long = 3_000L
 
     private fun activateDecentScaleClient(candidate: BleScaleScanCandidate?) {
         if (candidate == null) {
-            scaleConnectionJob?.cancel()
-            scaleConnectionJob = null
             realScaleReadinessJob?.cancel()
             realScaleReadinessJob = null
+            realScaleConnectionJob?.cancel()
+            realScaleConnectionJob = null
             realScaleFreshnessJob?.cancel()
             realScaleFreshnessJob = null
-            activeScaleConnectionState = ScaleConnectionState.Disconnected
-            activeScaleClient = scaleClient
-            updateScaleConnectionLabel(ScaleConnectionState.Disconnected.toScaleConnectionLabel())
+            realScaleClient = null
+            realScaleConnectionState = ScaleConnectionState.Disconnected
+            updateScaleConnectionLabel()
             return
         }
 
-        activateScaleClient(createDecentScaleClient(candidate))
+        val client = realScaleClient ?: createDecentScaleClient(candidate).also { createdClient ->
+            realScaleClient = createdClient
+        }
+        if (selectedScaleSource == CaptureScaleSource.DECENT) {
+            activeScaleClient = client
+        }
+        activateRealScaleClient(client)
     }
 
-    private fun activateScaleClient(client: ScaleClient) {
-        activeScaleClient = client
+    private fun activateFakeScaleClient() {
+        activeScaleClient = scaleClient
         activeScaleConnectionState = ScaleConnectionState.Disconnected
         scaleConnectionJob?.cancel()
+        scaleConnectionJob = viewModelScope.launch {
+            scaleClient.connectionState.collect { connectionState ->
+                activeScaleConnectionState = connectionState
+                updateScaleConnectionLabel()
+            }
+        }
+        updateCaptureSourceState()
+        scaleClient.connect()
+    }
+
+    private fun activateRealScaleClient(client: ScaleClient) {
+        realScaleConnectionState = ScaleConnectionState.Disconnected
+        realScaleConnectionJob?.cancel()
         realScaleReadinessJob?.cancel()
         realScaleReadinessJob = null
         realScaleFreshnessJob?.cancel()
         realScaleFreshnessJob = null
 
-        scaleConnectionJob = viewModelScope.launch {
+        realScaleConnectionJob = viewModelScope.launch {
             client.connectionState.collect { connectionState ->
-                if (activeScaleClient == client) {
-                    activeScaleConnectionState = connectionState
-                    if (connectionState != ScaleConnectionState.Connected) {
-                        realScaleHasReading = false
-                        realScaleFreshnessJob?.cancel()
-                        realScaleFreshnessJob = null
-                    }
-                    updateScaleConnectionLabel(connectionState.toScaleConnectionLabel())
+                realScaleConnectionState = connectionState
+                if (connectionState != ScaleConnectionState.Connected) {
+                    realScaleHasReading = false
+                    realScaleFreshnessJob?.cancel()
+                    realScaleFreshnessJob = null
                 }
+                updateScaleConnectionLabel()
             }
         }
 
-        if (selectedScaleSource == CaptureScaleSource.DECENT) {
-            realScaleReadinessJob = viewModelScope.launch {
-                client.readings.collect {
-                    if (activeScaleClient == client && selectedScaleSource == CaptureScaleSource.DECENT) {
-                        activeScaleConnectionState = ScaleConnectionState.Connected
-                        realScaleHasReading = true
-                        scheduleRealScaleFreshnessTimeout()
-                        updateCaptureSourceState()
-                    }
+        realScaleReadinessJob = viewModelScope.launch {
+            client.readings.collect {
+                realScaleConnectionState = ScaleConnectionState.Connected
+                realScaleHasReading = true
+                if (
+                    _uiState.value.status == CaptureStatus.READY &&
+                    selectedScaleSource == CaptureScaleSource.FAKE &&
+                    !suppressRealSourceAutoSelect
+                ) {
+                    selectedScaleSource = CaptureScaleSource.DECENT
+                    activeScaleClient = client
                 }
+                scheduleRealScaleFreshnessTimeout()
+                updateCaptureSourceState()
             }
         }
 
         updateCaptureSourceState()
-        client.connect()
     }
+
+    private fun currentScaleConnectionLabel(): String =
+        when (selectedScaleSource) {
+            CaptureScaleSource.FAKE -> activeScaleConnectionState.toScaleConnectionLabel()
+            CaptureScaleSource.DECENT -> realScaleConnectionState.toScaleConnectionLabel()
+        }
 
     private fun updateCaptureSourceState() {
         _uiState.value = _uiState.value.copy(
+            scaleConnectionLabel = currentScaleConnectionLabel(),
             selectedScaleSource = selectedScaleSource,
             scaleModeLabel = scaleModeLabelForSource(),
             captureSourceStatusLabel = captureSourceStatusLabel(),
@@ -324,13 +370,12 @@ private val savedConfirmationDelayMs: Long = 3_000L
         )
         updateReadyPrimaryActionEnabled()
     }
-
     private fun canStartCapture(): Boolean =
         _targetState.value.isValid && when (selectedScaleSource) {
             CaptureScaleSource.FAKE -> true
             CaptureScaleSource.DECENT ->
                 latestDecentScaleCandidate != null &&
-                    activeScaleConnectionState == ScaleConnectionState.Connected &&
+                    realScaleConnectionState == ScaleConnectionState.Connected &&
                     realScaleHasReading
         }
 
@@ -338,11 +383,9 @@ private val savedConfirmationDelayMs: Long = 3_000L
         realScaleFreshnessJob?.cancel()
         realScaleFreshnessJob = viewModelScope.launch {
             delay(REAL_SCALE_READING_FRESHNESS_MS)
-            if (selectedScaleSource == CaptureScaleSource.DECENT) {
-                realScaleHasReading = false
-                activeScaleConnectionState = ScaleConnectionState.Disconnected
-                updateScaleConnectionLabel(ScaleConnectionState.Disconnected.toScaleConnectionLabel())
-            }
+            realScaleHasReading = false
+            realScaleConnectionState = ScaleConnectionState.Disconnected
+            updateScaleConnectionLabel()
         }
     }
 
@@ -351,7 +394,7 @@ private val savedConfirmationDelayMs: Long = 3_000L
             CaptureScaleSource.FAKE -> "Capture source: Fake scale/demo"
             CaptureScaleSource.DECENT -> when {
                 latestDecentScaleCandidate == null -> "Capture source: Decent Scale/real unavailable"
-                activeScaleConnectionState != ScaleConnectionState.Connected ->
+                realScaleConnectionState != ScaleConnectionState.Connected ->
                     "Capture source: Decent Scale/real not connected"
                 !realScaleHasReading -> "Capture source: Decent Scale/real waiting for readings"
                 else -> "Capture source: Decent Scale/real ready"
@@ -363,7 +406,7 @@ private val savedConfirmationDelayMs: Long = 3_000L
             CaptureScaleSource.FAKE -> null
             CaptureScaleSource.DECENT -> when {
                 latestDecentScaleCandidate == null -> "Connect Decent Scale in BLE debug first."
-                activeScaleConnectionState != ScaleConnectionState.Connected -> "Waiting for Decent Scale connection."
+                realScaleConnectionState != ScaleConnectionState.Connected -> "Waiting for Decent Scale connection."
                 !realScaleHasReading -> "Waiting for live scale readings."
                 else -> null
             }
@@ -434,6 +477,7 @@ private val savedConfirmationDelayMs: Long = 3_000L
     override fun onCleared() {
         stopRecordingReadingUpdates()
         scaleConnectionJob?.cancel()
+        realScaleConnectionJob?.cancel()
         realScaleReadinessJob?.cancel()
         realScaleFreshnessJob?.cancel()
         super.onCleared()
