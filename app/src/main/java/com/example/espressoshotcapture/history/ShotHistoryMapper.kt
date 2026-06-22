@@ -103,7 +103,9 @@ object ShotHistoryMapper {
             qualityLabel = qualityLabel,
             finalYieldLabel = actualYieldG?.let { yield -> "Yield: ${yield.toOneDecimal()} g" }
                 ?: UNKNOWN_YIELD_LABEL,
-            flowTimeLabel = flowTimeMs?.let { timeMs -> "Flow time: ${timeMs / 1_000L} s" }
+            flowTimeLabel = flowTimeMs
+                ?.takeIf { timeMs -> timeMs >= 0L }
+                ?.let { timeMs -> "Flow time: ${timeMs.toFlowTimeText()} s" }
                 ?: UNKNOWN_FLOW_TIME_LABEL,
             sampleCountLabel = sampleCount?.let { count -> "Weight readings: $count" }
                 ?: UNKNOWN_SAMPLE_COUNT_LABEL,
@@ -152,6 +154,15 @@ object ShotHistoryMapper {
 
     private fun Double.toOneDecimal(): String =
         ((this * 10.0).roundToInt() / 10.0).toString()
+
+    private fun Long.toFlowTimeText(): String {
+        val seconds = this / 1_000.0
+        return if (this >= 10_000L && this % 1_000L == 0L) {
+            seconds.toLong().toString()
+        } else {
+            seconds.toOneDecimal()
+        }
+    }
 
     private fun Double.toRatioText(): String {
         val rounded = (this * 10.0).roundToInt() / 10.0

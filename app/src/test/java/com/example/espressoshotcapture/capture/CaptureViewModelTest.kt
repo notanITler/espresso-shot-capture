@@ -686,7 +686,7 @@ class CaptureViewModelTest {
 
         val historyItem = ShotHistoryMapper.fromEntity(savedShot)
         assertEquals("Yield: 0.8 g", historyItem.finalYieldLabel)
-        assertEquals("Flow time: 1 s", historyItem.flowTimeLabel)
+        assertEquals("Flow time: 1.0 s", historyItem.flowTimeLabel)
         assertEquals("Target: 36.0 g", historyItem.targetYieldLabel)
     }
 
@@ -714,7 +714,7 @@ class CaptureViewModelTest {
 
         val savedShot = dao.getAllShotsOnce().single()
         assertTrue(savedShot.json.contains(""""flowTimeMs":2000"""))
-        assertEquals("Flow time: 2 s", ShotHistoryMapper.fromEntity(savedShot).flowTimeLabel)
+        assertEquals("Flow time: 2.0 s", ShotHistoryMapper.fromEntity(savedShot).flowTimeLabel)
     }
 
     @Test
@@ -743,7 +743,7 @@ class CaptureViewModelTest {
             assertTrue(savedShot.json.contains(""""flowTimeMs":1000"""))
             assertTrue(savedShot.json.contains(""""actualYieldG":0.8"""))
             assertTrue(savedShot.json.contains(""""sampleCount":2"""))
-            assertEquals("Flow time: 1 s", ShotHistoryMapper.fromEntity(savedShot).flowTimeLabel)
+            assertEquals("Flow time: 1.0 s", ShotHistoryMapper.fromEntity(savedShot).flowTimeLabel)
         }
     }
 

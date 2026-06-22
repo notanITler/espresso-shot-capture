@@ -101,14 +101,15 @@ class ShotHistoryMapperTest {
                 {
                   "schemaVersion": 1,
                   "shot": {
-                    "timing": { "flowTimeMs": 20000 },
-                    "result": { "actualYieldG": 42.0, "sampleCount": 4 }
+                    "timing": { "flowTimeMs": 2845 },
+                    "result": { "actualYieldG": 40.4, "sampleCount": 4 }
                   }
                 }
             """.trimIndent()
         )
 
-        assertEquals("Average flow: 2.1 g/s", summary.averageFlowLabel)
+        assertEquals("Flow time: 2.8 s", summary.flowTimeLabel)
+        assertEquals("Average flow: 14.2 g/s", summary.averageFlowLabel)
     }
 
     @Test
@@ -125,6 +126,25 @@ class ShotHistoryMapperTest {
             """.trimIndent()
         )
 
+        assertEquals("Flow time: 0.0 s", summary.flowTimeLabel)
+        assertEquals("Average flow: --", summary.averageFlowLabel)
+    }
+
+    @Test
+    fun impossibleFlowDurationUsesUnknownMetrics() {
+        val summary = ShotHistoryMapper.summaryFromJson(
+            """
+                {
+                  "schemaVersion": 1,
+                  "shot": {
+                    "timing": { "flowTimeMs": -1 },
+                    "result": { "actualYieldG": 40.4, "sampleCount": 4 }
+                  }
+                }
+            """.trimIndent()
+        )
+
+        assertEquals("Flow time: --", summary.flowTimeLabel)
         assertEquals("Average flow: --", summary.averageFlowLabel)
     }
 

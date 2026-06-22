@@ -123,6 +123,36 @@ class ShotHistoryStateMapperTest {
         )
     }
 
+    @Test
+    fun historyAndSelectedDetailUseConsistentMetricFormatting() {
+        val json = """
+            {
+              "schemaVersion": 1,
+              "shot": {
+                "timing": { "flowTimeMs": 2845 },
+                "result": { "actualYieldG": 40.4, "sampleCount": 4 },
+                "samples": [{}, {}, {}, {}]
+              }
+            }
+        """.trimIndent()
+        val uiState = ShotHistoryStateMapper.fromEntities(
+            entities = listOf(
+                shotEntity(id = "shot-short", createdAtEpochMillis = 1_000L, json = json)
+            ),
+            selectedShotId = "shot-short"
+        )
+
+        val historyItem = uiState.items.single()
+        val detail = requireNotNull(uiState.selectedShotDetail)
+
+        assertEquals("Yield: 40.4 g", historyItem.finalYieldLabel)
+        assertEquals("Flow time: 2.8 s", historyItem.flowTimeLabel)
+        assertEquals("Average flow: 14.2 g/s", historyItem.averageFlowLabel)
+        assertEquals(historyItem.finalYieldLabel, detail.finalYieldLabel)
+        assertEquals(historyItem.flowTimeLabel, detail.flowTimeLabel)
+        assertEquals(historyItem.averageFlowLabel, detail.averageFlowLabel)
+    }
+
     private fun shotEntity(
         id: String,
         createdAtEpochMillis: Long,
