@@ -7,5 +7,10 @@ import androidx.room.PrimaryKey
 data class ShotEntity(
     @PrimaryKey val id: String,
     val json: String,
-    val createdAtEpochMillis: Long
+    val createdAtEpochMillis: Long,
+    val rating: Int? = null,
+    val tasteDirection: String? = null,
+    val grindSetting: String? = null,
+    val beanName: String? = null,
+    val notes: String? = null
 )

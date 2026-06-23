@@ -11,6 +11,7 @@ import com.example.espressoshotcapture.ble.DecentScaleGattClient
 import com.example.espressoshotcapture.capture.domain.FakeScaleClient
 import com.example.espressoshotcapture.capture.domain.ScaleClient
 import com.example.espressoshotcapture.persistence.EspressoShotDatabase
+import com.example.espressoshotcapture.persistence.MIGRATION_1_2
 import com.example.espressoshotcapture.repository.ShotRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -29,7 +30,9 @@ class AppContainer(context: Context) {
             appContext,
             EspressoShotDatabase::class.java,
             "espresso-shot.db"
-        ).build()
+        )
+            .addMigrations(MIGRATION_1_2)
+            .build()
     }
 
     val shotDao by lazy {

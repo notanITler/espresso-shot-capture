@@ -11,8 +11,10 @@ import com.example.espressoshotcapture.capture.domain.ShotResult
 import com.example.espressoshotcapture.capture.domain.ShotSource
 import com.example.espressoshotcapture.capture.domain.ShotStatus
 import com.example.espressoshotcapture.capture.domain.ShotTiming
+import com.example.espressoshotcapture.capture.domain.ShotUserMetadata
 import com.example.espressoshotcapture.capture.domain.StartMode
 import com.example.espressoshotcapture.capture.domain.StopMode
+import com.example.espressoshotcapture.capture.domain.TasteDirection
 import com.example.espressoshotcapture.persistence.EspressoShotDatabase
 import com.example.espressoshotcapture.persistence.ShotDao
 import com.example.espressoshotcapture.persistence.ShotEntity
@@ -20,6 +22,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -89,6 +93,52 @@ class ShotRepositoryTest {
             ShotEntityMapper.fromShotDraft(draft),
             dao.getShotById("shot-1")
         )
+    }
+
+    @Test
+    fun saveShotDraftWithoutMetadataStoresNullMetadata() = runTest {
+        repository.saveShotDraft(sampleDraft(id = "shot-empty", createdAtEpochMs = 1_234L))
+
+        val entity = requireNotNull(dao.getShotById("shot-empty"))
+        assertEquals(ShotUserMetadata(), ShotEntityMapper.toUserMetadata(entity))
+        assertNull(entity.rating)
+        assertNull(entity.tasteDirection)
+        assertNull(entity.grindSetting)
+        assertNull(entity.beanName)
+        assertNull(entity.notes)
+    }
+
+    @Test
+    fun saveShotDraftPersistsFullMetadata() = runTest {
+        val metadata = ShotUserMetadata(
+            rating = 4,
+            tasteDirection = TasteDirection.SOUR,
+            grindSetting = "8.10",
+            beanName = "Kenya AA",
+            notes = "Increase yield next time"
+        )
+
+        repository.saveShotDraft(
+            shotDraft = sampleDraft(id = "shot-full", createdAtEpochMs = 1_234L),
+            userMetadata = metadata
+        )
+
+        val entity = requireNotNull(dao.getShotById("shot-full"))
+        assertEquals(metadata, ShotEntityMapper.toUserMetadata(entity))
+        assertEquals("8.10", entity.grindSetting)
+    }
+
+    @Test
+    fun invalidMetadataIsRejectedBeforeInsert() = runTest {
+        val invalidMetadata = ShotUserMetadata(rating = 6)
+
+        assertThrows(IllegalArgumentException::class.java) {
+            repository.saveShotDraft(
+                shotDraft = sampleDraft(id = "shot-invalid", createdAtEpochMs = 1_234L),
+                userMetadata = invalidMetadata
+            )
+        }
+        assertNull(dao.getShotById("shot-invalid"))
     }
 
     private fun shotEntity(

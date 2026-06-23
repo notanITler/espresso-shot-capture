@@ -8,8 +8,10 @@ import com.example.espressoshotcapture.capture.domain.ShotResult
 import com.example.espressoshotcapture.capture.domain.ShotSource
 import com.example.espressoshotcapture.capture.domain.ShotStatus
 import com.example.espressoshotcapture.capture.domain.ShotTiming
+import com.example.espressoshotcapture.capture.domain.ShotUserMetadata
 import com.example.espressoshotcapture.capture.domain.StartMode
 import com.example.espressoshotcapture.capture.domain.StopMode
+import com.example.espressoshotcapture.capture.domain.TasteDirection
 import com.example.espressoshotcapture.export.ShotDraftJsonExporter
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -39,6 +41,36 @@ class ShotEntityMapperTest {
 
         val entity = ShotEntityMapper.fromShotDraft(draft)
 
+        assertEquals(ShotDraftJsonExporter.export(draft), entity.json)
+    }
+
+    @Test
+    fun shotWithoutUserMetadataMapsToEmptyMetadata() {
+        val entity = ShotEntityMapper.fromShotDraft(sampleDraft())
+
+        assertEquals(ShotUserMetadata(), ShotEntityMapper.toUserMetadata(entity))
+        assertEquals(null, entity.rating)
+        assertEquals(null, entity.tasteDirection)
+        assertEquals(null, entity.grindSetting)
+        assertEquals(null, entity.beanName)
+        assertEquals(null, entity.notes)
+    }
+
+    @Test
+    fun fullUserMetadataRoundTripsWithoutChangingJson() {
+        val draft = sampleDraft()
+        val metadata = ShotUserMetadata(
+            rating = 5,
+            tasteDirection = TasteDirection.BALANCED,
+            grindSetting = "8.10",
+            beanName = "Ethiopia Guji",
+            notes = "Sweet and clear"
+        )
+
+        val entity = ShotEntityMapper.fromShotDraft(draft, metadata)
+
+        assertEquals(metadata, ShotEntityMapper.toUserMetadata(entity))
+        assertEquals("8.10", entity.grindSetting)
         assertEquals(ShotDraftJsonExporter.export(draft), entity.json)
     }
 
