@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.espressoshotcapture.capture.domain.ShotUserMetadata
 import com.example.espressoshotcapture.capture.domain.ShotUserMetadataValidator
 import com.example.espressoshotcapture.capture.domain.TasteDirection
+import com.example.espressoshotcapture.persistence.ShotEntity
 import com.example.espressoshotcapture.repository.ShotRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -13,6 +14,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -24,10 +26,12 @@ class ShotHistoryViewModel(
     private val selectedShotId = MutableStateFlow<String?>(null)
     private val selectedBeanFilterKey = MutableStateFlow(ShotHistoryBeanFilterKeys.ALL)
     private val metadataEditorOverride = MutableStateFlow<ShotUserMetadataEditorState?>(null)
+    private var hasObservedInitialShots = false
+    private var observedShotIds: Set<String> = emptySet()
 
     val uiState: StateFlow<ShotHistoryUiState> =
         combine(
-            shotRepository.observeShots(),
+            shotRepository.observeShots().onEach(::handleObservedShots),
             selectedShotId,
             selectedBeanFilterKey,
             metadataEditorOverride
@@ -111,6 +115,7 @@ class ShotHistoryViewModel(
                 validationMessage = result.fold(
                     onSuccess = { wasUpdated ->
                         if (wasUpdated) {
+                            keepSelectedShotVisibleAfterMetadataSave(editor, metadata)
                             "Shot feedback saved"
                         } else {
                             "Shot no longer exists"
@@ -138,6 +143,10 @@ class ShotHistoryViewModel(
                 validationMessage = result.fold(
                     onSuccess = { wasUpdated ->
                         if (wasUpdated) {
+                            selectedShotId.value = editor.shotId
+                            if (!currentFilterIncludesBeanName(null)) {
+                                selectedBeanFilterKey.value = ShotHistoryBeanFilterKeys.UNASSIGNED
+                            }
                             "Shot feedback cleared"
                         } else {
                             "Shot no longer exists"
@@ -160,6 +169,46 @@ class ShotHistoryViewModel(
         val selectedId = selectedShotId.value
         return metadataEditorOverride.value?.takeIf { editor -> editor.shotId == selectedId }
             ?: uiState.value.metadataEditor
+    }
+
+    private fun handleObservedShots(entities: List<ShotEntity>) {
+        val currentIds = entities.map { entity -> entity.id }.toSet()
+        if (!hasObservedInitialShots) {
+            hasObservedInitialShots = true
+            observedShotIds = currentIds
+            return
+        }
+
+        val newShot = entities
+            .filter { entity -> entity.id !in observedShotIds }
+            .maxByOrNull { entity -> entity.createdAtEpochMillis }
+        observedShotIds = currentIds
+
+        if (newShot != null) {
+            selectedBeanFilterKey.value = ShotHistoryBeanFilterKeys.UNASSIGNED
+            selectedShotId.value = newShot.id
+            metadataEditorOverride.value = null
+        }
+    }
+
+    private fun keepSelectedShotVisibleAfterMetadataSave(
+        editor: ShotUserMetadataEditorState,
+        metadata: ShotUserMetadata
+    ) {
+        selectedShotId.value = editor.shotId
+        if (!currentFilterIncludesBeanName(metadata.beanName)) {
+            selectedBeanFilterKey.value = ShotHistoryBeanFilterKeys.keyForBeanName(metadata.beanName)
+                ?: ShotHistoryBeanFilterKeys.UNASSIGNED
+        }
+    }
+
+    private fun currentFilterIncludesBeanName(beanName: String?): Boolean {
+        val beanFilterKey = ShotHistoryBeanFilterKeys.keyForBeanName(beanName)
+        return when (selectedBeanFilterKey.value) {
+            ShotHistoryBeanFilterKeys.ALL -> true
+            ShotHistoryBeanFilterKeys.UNASSIGNED -> beanFilterKey == null
+            else -> selectedBeanFilterKey.value == beanFilterKey
+        }
     }
 
     private fun ShotUserMetadataEditorState.toUserMetadataOrNull(): ShotUserMetadata? {

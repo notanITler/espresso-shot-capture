@@ -145,6 +145,72 @@ class ShotHistoryViewModelTest {
     }
 
     @Test
+    fun savingNewShotWhileBeanFilterIsActiveSwitchesToUnassignedAndSelectsNewShot() = runTest(testDispatcher) {
+        dao.insertShot(shotEntity(id = "shot-delta", createdAtEpochMillis = 2_000L, beanName = "Delta"))
+        dao.insertShot(shotEntity(id = "shot-hannover", createdAtEpochMillis = 1_000L, beanName = "Hannover"))
+        viewModel.uiState.first { state -> state.items.size == 2 }
+        viewModel.selectBeanFilter(ShotHistoryBeanFilterKeys.bean("delta"))
+        viewModel.uiState.first { state -> state.items.map { item -> item.id } == listOf("shot-delta") }
+
+        dao.insertShot(shotEntity(id = "shot-new", createdAtEpochMillis = 3_000L))
+
+        val uiState = viewModel.uiState
+            .first { state -> state.selectedShotDetail?.id == "shot-new" }
+        assertEquals(
+            ShotHistoryBeanFilterKeys.UNASSIGNED,
+            uiState.beanFilterOptions.first { option -> option.isSelected }.key
+        )
+        assertEquals(listOf("shot-new"), uiState.items.map { item -> item.id })
+        assertEquals("shot-new", uiState.metadataEditor?.shotId)
+    }
+
+    @Test
+    fun savingMetadataWithBeanNameFromUnassignedFilterSwitchesToThatBeanAndKeepsShotSelected() =
+        runTest(testDispatcher) {
+            dao.insertShot(shotEntity(id = "shot-new", createdAtEpochMillis = 1_000L))
+            viewModel.uiState.first { state -> state.items.map { item -> item.id } == listOf("shot-new") }
+            viewModel.selectBeanFilter(ShotHistoryBeanFilterKeys.UNASSIGNED)
+            viewModel.selectShot("shot-new")
+            viewModel.uiState.first { state -> state.metadataEditor?.shotId == "shot-new" }
+
+            viewModel.updateMetadataBeanName(" Delta ")
+            viewModel.saveShotUserMetadata()
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            val uiState = viewModel.uiState
+                .first { state ->
+                    state.beanFilterOptions.any { option ->
+                        option.key == ShotHistoryBeanFilterKeys.bean("delta") && option.isSelected
+                    } && state.selectedShotDetail?.id == "shot-new"
+                }
+            assertEquals(listOf("shot-new"), uiState.items.map { item -> item.id })
+            assertEquals("shot-new", uiState.metadataEditor?.shotId)
+            assertEquals("Shot feedback saved", uiState.metadataEditor?.validationMessage)
+        }
+
+    @Test
+    fun blankBeanNameMetadataRemainsUnassignedAndKeepsShotSelected() = runTest(testDispatcher) {
+        dao.insertShot(shotEntity(id = "shot-blank", createdAtEpochMillis = 1_000L))
+        viewModel.uiState.first { state -> state.items.map { item -> item.id } == listOf("shot-blank") }
+        viewModel.selectBeanFilter(ShotHistoryBeanFilterKeys.UNASSIGNED)
+        viewModel.selectShot("shot-blank")
+        viewModel.uiState.first { state -> state.metadataEditor?.shotId == "shot-blank" }
+
+        viewModel.updateMetadataBeanName("   ")
+        viewModel.saveShotUserMetadata()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val uiState = viewModel.uiState
+            .first { state ->
+                state.beanFilterOptions.any { option ->
+                    option.key == ShotHistoryBeanFilterKeys.UNASSIGNED && option.isSelected
+                } && state.selectedShotDetail?.id == "shot-blank"
+            }
+        assertEquals(listOf("shot-blank"), uiState.items.map { item -> item.id })
+        assertEquals("shot-blank", uiState.metadataEditor?.shotId)
+    }
+
+    @Test
     fun selectingShotShowsDetailFromRepositoryJson() = runTest(testDispatcher) {
         val json = """{"schemaVersion":1,"shot":{"id":"shot-2","status":"COMPLETED"}}"""
         dao.insertShot(shotEntity(id = "shot-1", createdAtEpochMillis = 1_000L))

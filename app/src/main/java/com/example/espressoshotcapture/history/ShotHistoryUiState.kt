@@ -1,6 +1,7 @@
 package com.example.espressoshotcapture.history
 
 import com.example.espressoshotcapture.capture.domain.TasteDirection
+import java.util.Locale
 
 data class ShotHistoryUiState(
     val items: List<ShotHistoryItem>,
@@ -27,6 +28,15 @@ object ShotHistoryBeanFilterKeys {
 
     fun bean(normalizedBeanName: String): String =
         "bean:$normalizedBeanName"
+
+    fun normalizedBeanName(beanName: String?): String? =
+        beanName
+            ?.trim()
+            ?.takeIf { value -> value.isNotBlank() }
+            ?.lowercase(Locale.ROOT)
+
+    fun keyForBeanName(beanName: String?): String? =
+        normalizedBeanName(beanName)?.let(::bean)
 }
 
 data class ShotHistoryDetail(

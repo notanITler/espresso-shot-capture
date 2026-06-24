@@ -2,7 +2,6 @@ package com.example.espressoshotcapture.history
 
 import com.example.espressoshotcapture.persistence.ShotEntity
 import com.example.espressoshotcapture.repository.ShotEntityMapper
-import java.util.Locale
 
 object ShotHistoryStateMapper {
     fun fromEntities(
@@ -90,10 +89,7 @@ object ShotHistoryStateMapper {
         }
 
     private fun ShotEntity.normalizedBeanName(): String? =
-        beanName
-            ?.trim()
-            ?.takeIf { value -> value.isNotBlank() }
-            ?.lowercase(Locale.ROOT)
+        ShotHistoryBeanFilterKeys.normalizedBeanName(beanName)
 
     private fun ShotEntity.toMetadataEditor(): ShotUserMetadataEditorState {
         val metadata = ShotEntityMapper.toUserMetadata(this)
