@@ -44,6 +44,7 @@ class ShotHistoryMapperTest {
             ShotHistoryItem(
                 id = "shot-1",
                 createdAtEpochMillis = 1_000L,
+                comparisonMetricsLabel = "18.0 g -> 36.8 g | 28 s | 1.3 g/s",
                 sourceLabel = "Source: Fake/demo",
                 qualityLabel = "Data status: Complete",
                 finalYieldLabel = "Yield: 36.8 g",
@@ -242,6 +243,59 @@ class ShotHistoryMapperTest {
         )
 
         assertEquals("Yield: 35.9 g", ShotHistoryMapper.fromEntity(entity).finalYieldLabel)
+        assertEquals("35.9 g | 25 s | 1.4 g/s", ShotHistoryMapper.fromEntity(entity).comparisonMetricsLabel)
+    }
+
+    @Test
+    fun historyItemUsesMetadataFirstComparisonLabelsWhenAvailable() {
+        val entity = shotEntity(
+            id = "shot-metadata",
+            json = """
+                {
+                  "schemaVersion": 1,
+                  "shot": {
+                    "target": { "doseG": 18.0, "targetYieldG": 36.0 },
+                    "timing": { "flowTimeMs": 27800 },
+                    "result": { "actualYieldG": 36.5, "averageFlowGPerS": 1.31, "sampleCount": 10 }
+                  }
+                }
+            """.trimIndent(),
+            createdAtEpochMillis = 1_000L,
+            rating = 4,
+            tasteDirection = "BALANCED",
+            grindSetting = "8.10",
+            beanName = "Delta Espresso Bar"
+        )
+
+        val item = ShotHistoryMapper.fromEntity(entity)
+
+        assertEquals("Delta Espresso Bar | Rating 4/5", item.comparisonTitleLabel)
+        assertEquals("Grind 8.10 | Balanced", item.comparisonMetadataLabel)
+        assertEquals("18.0 g -> 36.5 g | 27.8 s | 1.3 g/s", item.comparisonMetricsLabel)
+    }
+
+    @Test
+    fun historyItemUsesObjectiveMetricsWhenMetadataIsMissing() {
+        val entity = shotEntity(
+            id = "shot-objective",
+            json = """
+                {
+                  "schemaVersion": 1,
+                  "shot": {
+                    "target": { "doseG": 18.0, "targetYieldG": 36.0 },
+                    "timing": { "flowTimeMs": 27800 },
+                    "result": { "actualYieldG": 36.5, "averageFlowGPerS": 1.31, "sampleCount": 10 }
+                  }
+                }
+            """.trimIndent(),
+            createdAtEpochMillis = 1_000L
+        )
+
+        val item = ShotHistoryMapper.fromEntity(entity)
+
+        assertEquals("Unassigned bean", item.comparisonTitleLabel)
+        assertEquals(null, item.comparisonMetadataLabel)
+        assertEquals("18.0 g -> 36.5 g | 27.8 s | 1.3 g/s", item.comparisonMetricsLabel)
     }
 
     @Test
@@ -286,6 +340,7 @@ class ShotHistoryMapperTest {
             ShotHistoryItem(
                 id = "shot-1",
                 createdAtEpochMillis = 1_000L,
+                comparisonMetricsLabel = "--",
                 finalYieldLabel = "Yield: --",
                 flowTimeLabel = "Flow time: --",
                 targetYieldLabel = "Target: --"
@@ -306,6 +361,7 @@ class ShotHistoryMapperTest {
             ShotHistoryItem(
                 id = "shot-1",
                 createdAtEpochMillis = 1_000L,
+                comparisonMetricsLabel = "--",
                 finalYieldLabel = "Yield: --",
                 flowTimeLabel = "Flow time: --",
                 qualityLabel = "Data status: Missing target",
@@ -318,11 +374,19 @@ class ShotHistoryMapperTest {
     private fun shotEntity(
         id: String,
         json: String = """{"schemaVersion":1}""",
-        createdAtEpochMillis: Long
+        createdAtEpochMillis: Long,
+        rating: Int? = null,
+        tasteDirection: String? = null,
+        grindSetting: String? = null,
+        beanName: String? = null
     ): ShotEntity =
         ShotEntity(
             id = id,
             json = json,
-            createdAtEpochMillis = createdAtEpochMillis
+            createdAtEpochMillis = createdAtEpochMillis,
+            rating = rating,
+            tasteDirection = tasteDirection,
+            grindSetting = grindSetting,
+            beanName = beanName
         )
 }

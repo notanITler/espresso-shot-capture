@@ -15,6 +15,8 @@ import java.util.Locale
 import kotlin.math.roundToInt
 
 object ShotHistoryMapper {
+    const val UNASSIGNED_BEAN_LABEL: String = "Unassigned bean"
+    const val UNKNOWN_COMPARISON_METRICS_LABEL: String = "--"
     const val UNKNOWN_YIELD_LABEL: String = "Yield: --"
     const val UNKNOWN_FLOW_TIME_LABEL: String = "Flow time: --"
     const val UNKNOWN_TARGET_YIELD_LABEL: String = "Target: --"
@@ -33,6 +35,9 @@ object ShotHistoryMapper {
                 id = entity.id,
                 createdAtEpochMillis = entity.createdAtEpochMillis,
                 createdLabel = createdLabel(entity.createdAtEpochMillis),
+                comparisonTitleLabel = comparisonTitleLabel(entity),
+                comparisonMetadataLabel = comparisonMetadataLabel(entity),
+                comparisonMetricsLabel = comparisonMetricsLabel(summary),
                 sourceLabel = summary.sourceLabel,
                 qualityLabel = summary.qualityLabel,
                 finalYieldLabel = summary.finalYieldLabel,
@@ -117,7 +122,11 @@ object ShotHistoryMapper {
                 ?: UNKNOWN_RATIO_LABEL,
             averageFlowLabel = averageFlowGPerS?.let { flow -> "Average flow: ${flow.toOneDecimal()} g/s" }
                 ?: UNKNOWN_AVERAGE_FLOW_LABEL,
-            targetReachedLabel = targetReachedLabel
+            targetReachedLabel = targetReachedLabel,
+            actualYieldG = actualYieldG,
+            flowTimeMs = flowTimeMs,
+            averageFlowGPerS = averageFlowGPerS,
+            doseG = doseG
         )
     }
 
@@ -131,8 +140,60 @@ object ShotHistoryMapper {
         val targetYieldLabel: String = UNKNOWN_TARGET_YIELD_LABEL,
         val ratioLabel: String = UNKNOWN_RATIO_LABEL,
         val averageFlowLabel: String = UNKNOWN_AVERAGE_FLOW_LABEL,
-        val targetReachedLabel: String = UNKNOWN_TARGET_REACHED_LABEL
+        val targetReachedLabel: String = UNKNOWN_TARGET_REACHED_LABEL,
+        val actualYieldG: Double? = null,
+        val flowTimeMs: Long? = null,
+        val averageFlowGPerS: Double? = null,
+        val doseG: Double? = null
     )
+
+    private fun comparisonTitleLabel(entity: ShotEntity): String {
+        val beanName = entity.beanName?.trim().orEmpty().ifBlank { UNASSIGNED_BEAN_LABEL }
+        val rating = entity.rating
+            ?.takeIf { value -> value in 1..5 }
+            ?.let { value -> "Rating $value/5" }
+        return listOfNotNull(beanName, rating).joinToString(" | ")
+    }
+
+    private fun comparisonMetadataLabel(entity: ShotEntity): String? {
+        val grind = entity.grindSetting?.trim().orEmpty()
+            .ifBlank { null }
+            ?.let { value -> "Grind $value" }
+        val taste = entity.tasteDirection?.trim().orEmpty()
+            .ifBlank { null }
+            ?.let(::tasteDirectionLabel)
+        return listOfNotNull(grind, taste)
+            .takeIf { parts -> parts.isNotEmpty() }
+            ?.joinToString(" | ")
+    }
+
+    private fun comparisonMetricsLabel(summary: ShotHistorySummary): String {
+        val dose = summary.doseG?.let { value -> "${value.toOneDecimal()} g" }
+        val yield = summary.actualYieldG?.let { value -> "${value.toOneDecimal()} g" }
+        val doseToYield = when {
+            dose != null && yield != null -> "$dose -> $yield"
+            yield != null -> yield
+            dose != null -> "$dose -> --"
+            else -> null
+        }
+        val flowTime = summary.flowTimeMs
+            ?.takeIf { timeMs -> timeMs >= 0L }
+            ?.let { timeMs -> "${timeMs.toFlowTimeText()} s" }
+        val averageFlow = summary.averageFlowGPerS?.let { value -> "${value.toOneDecimal()} g/s" }
+
+        return listOfNotNull(doseToYield, flowTime, averageFlow)
+            .takeIf { parts -> parts.isNotEmpty() }
+            ?.joinToString(" | ")
+            ?: UNKNOWN_COMPARISON_METRICS_LABEL
+    }
+
+    private fun tasteDirectionLabel(value: String): String? =
+        when (value) {
+            "SOUR" -> "Sour"
+            "BALANCED" -> "Balanced"
+            "BITTER" -> "Bitter"
+            else -> null
+        }
 
     private fun JsonObject.objectAt(key: String): JsonObject? =
         this[key] as? JsonObject

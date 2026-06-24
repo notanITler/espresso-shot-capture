@@ -48,27 +48,25 @@ class ShotHistoryScreenTest {
                 ShotHistoryItem(
                     id = "shot-1000",
                     createdAtEpochMillis = 1_000L,
-                    finalYieldLabel = "Yield: 36.8 g",
-                    flowTimeLabel = "Flow time: 28 s",
-                    targetYieldLabel = "Target: 36.0 g",
-                    sourceLabel = "Source: Fake/demo",
-                    qualityLabel = "Data status: Complete",
-                    sampleCountLabel = "Weight readings: 3",
-                    doseLabel = "Dose: 18.0 g"
+                    comparisonTitleLabel = "Delta Espresso Bar | Rating 4/5",
+                    comparisonMetadataLabel = "Grind 8.10 | Balanced",
+                    comparisonMetricsLabel = "18.0 g -> 36.8 g | 28 s | 1.3 g/s"
                 ),
-                ShotHistoryItem(id = "shot-2000", createdAtEpochMillis = 2_000L)
+                ShotHistoryItem(
+                    id = "shot-2000",
+                    createdAtEpochMillis = 2_000L,
+                    comparisonMetricsLabel = "18.0 g -> 37.1 g | 29 s | 1.3 g/s"
+                )
             )
         )
 
-        composeTestRule.onNodeWithText(
-            "Source: Fake/demo  |  Yield: 36.8 g"
-        ).assertIsDisplayed()
-        composeTestRule.onNodeWithText(
-            "Flow time: 28 s  |  Weight readings: 3"
-        ).assertIsDisplayed()
-        composeTestRule.onNodeWithText("Data status: Complete").assertIsDisplayed()
-        composeTestRule.onNodeWithText(ShotHistoryMapper.createdLabel(1_000L)).assertIsDisplayed()
-        composeTestRule.onNodeWithText("Source: --  |  Yield: --").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Delta Espresso Bar | Rating 4/5").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Grind 8.10 | Balanced").assertIsDisplayed()
+        composeTestRule.onNodeWithText("18.0 g -> 36.8 g | 28 s | 1.3 g/s").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Unassigned bean").assertIsDisplayed()
+        composeTestRule.onNodeWithText("18.0 g -> 37.1 g | 29 s | 1.3 g/s").assertIsDisplayed()
+        composeTestRule.onAllNodesWithText("shot-1000").assertCountEquals(0)
+        composeTestRule.onAllNodesWithText("Created: 1000").assertCountEquals(0)
     }
 
     @Test
@@ -80,23 +78,17 @@ class ShotHistoryScreenTest {
                         ShotHistoryItem(
                             id = "shot-3000",
                             createdAtEpochMillis = 3_000L,
-                            sourceLabel = "Source: Decent Scale",
-                            finalYieldLabel = "Yield: 37.1 g",
-                            flowTimeLabel = "Flow time: 29 s",
-                            sampleCountLabel = "Weight readings: 12",
-                            qualityLabel = "Data status: Complete"
+                            comparisonTitleLabel = "Unassigned bean",
+                            comparisonMetricsLabel = "18.0 g -> 37.1 g | 29 s | 1.3 g/s"
                         )
                     )
                 )
             )
         }
 
-        composeTestRule.onNodeWithText("Source: Decent Scale  |  Yield: 37.1 g").assertIsDisplayed()
-        composeTestRule.onNodeWithText(
-            "Flow time: 29 s  |  Weight readings: 12"
-        ).assertIsDisplayed()
-        composeTestRule.onNodeWithText("Data status: Complete").assertIsDisplayed()
-        composeTestRule.onNodeWithText(ShotHistoryMapper.createdLabel(3_000L)).assertIsDisplayed()
+        composeTestRule.onNodeWithText("Unassigned bean").assertIsDisplayed()
+        composeTestRule.onNodeWithText("18.0 g -> 37.1 g | 29 s | 1.3 g/s").assertIsDisplayed()
+        composeTestRule.onAllNodesWithText(ShotHistoryMapper.createdLabel(3_000L)).assertCountEquals(0)
         composeTestRule.onAllNodesWithText("Raw JSON / debug detail").assertCountEquals(0)
     }
 
@@ -104,21 +96,21 @@ class ShotHistoryScreenTest {
     fun longHistoryOnlyShowsNewestThreeRows() {
         setHistoryContent(
             items = listOf(
-                ShotHistoryItem(id = "shot-6", createdAtEpochMillis = 6_000L),
-                ShotHistoryItem(id = "shot-5", createdAtEpochMillis = 5_000L),
-                ShotHistoryItem(id = "shot-4", createdAtEpochMillis = 4_000L),
-                ShotHistoryItem(id = "shot-3", createdAtEpochMillis = 3_000L),
-                ShotHistoryItem(id = "shot-2", createdAtEpochMillis = 2_000L),
-                ShotHistoryItem(id = "shot-1", createdAtEpochMillis = 1_000L)
+                ShotHistoryItem(id = "shot-6", createdAtEpochMillis = 6_000L, comparisonTitleLabel = "Bean 6"),
+                ShotHistoryItem(id = "shot-5", createdAtEpochMillis = 5_000L, comparisonTitleLabel = "Bean 5"),
+                ShotHistoryItem(id = "shot-4", createdAtEpochMillis = 4_000L, comparisonTitleLabel = "Bean 4"),
+                ShotHistoryItem(id = "shot-3", createdAtEpochMillis = 3_000L, comparisonTitleLabel = "Bean 3"),
+                ShotHistoryItem(id = "shot-2", createdAtEpochMillis = 2_000L, comparisonTitleLabel = "Bean 2"),
+                ShotHistoryItem(id = "shot-1", createdAtEpochMillis = 1_000L, comparisonTitleLabel = "Bean 1")
             )
         )
 
-        composeTestRule.onNodeWithText(ShotHistoryMapper.createdLabel(6_000L)).assertIsDisplayed()
+        composeTestRule.onNodeWithText("Bean 6").assertIsDisplayed()
         composeTestRule
             .onNodeWithTag(ShotHistoryScreenTestTags.HISTORY_LIST)
-            .performScrollToNode(hasText(ShotHistoryMapper.createdLabel(4_000L)))
-        composeTestRule.onNodeWithText(ShotHistoryMapper.createdLabel(4_000L)).assertIsDisplayed()
-        composeTestRule.onAllNodesWithText(ShotHistoryMapper.createdLabel(3_000L)).assertCountEquals(0)
+            .performScrollToNode(hasText("Bean 4"))
+        composeTestRule.onNodeWithText("Bean 4").assertIsDisplayed()
+        composeTestRule.onAllNodesWithText("Bean 3").assertCountEquals(0)
     }
 
     @Test
@@ -176,7 +168,7 @@ class ShotHistoryScreenTest {
         composeTestRule.onAllNodesWithText("Target reached: yes").assertCountEquals(1)
         composeTestRule.onAllNodesWithText("id: shot-2000").assertCountEquals(0)
         composeTestRule.onAllNodesWithText("Created: 2000").assertCountEquals(0)
-        composeTestRule.onAllNodesWithText(ShotHistoryMapper.createdLabel(2_000L)).assertCountEquals(2)
+        composeTestRule.onAllNodesWithText(ShotHistoryMapper.createdLabel(2_000L)).assertCountEquals(1)
         composeTestRule.onAllNodesWithTag(ShotHistoryScreenTestTags.RAW_JSON_TOGGLE).assertCountEquals(1)
         composeTestRule.onAllNodesWithTag(ShotHistoryScreenTestTags.RAW_JSON).assertCountEquals(0)
         composeTestRule.onAllNodesWithText(json).assertCountEquals(0)

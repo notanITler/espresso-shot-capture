@@ -223,19 +223,20 @@ private fun ShotHistoryRow(
             .padding(horizontal = 10.dp, vertical = 8.dp)
     ) {
         BasicText(
-            text = "${item.sourceLabel}  |  ${item.finalYieldLabel}",
+            text = item.comparisonTitleLabel,
+            modifier = Modifier.testTag(ShotHistoryScreenTestTags.historyRowTitle(item.id)),
             style = historyStrongStyle()
         )
+        if (item.comparisonMetadataLabel != null) {
+            BasicText(
+                text = item.comparisonMetadataLabel,
+                modifier = Modifier.testTag(ShotHistoryScreenTestTags.historyRowMetadata(item.id)),
+                style = historyBodyStyle()
+            )
+        }
         BasicText(
-            text = "${item.flowTimeLabel}  |  ${item.sampleCountLabel}",
-            style = historyBodyStyle()
-        )
-        BasicText(
-            text = item.qualityLabel,
-            style = historyMutedStyle()
-        )
-        BasicText(
-            text = item.createdLabel,
+            text = item.comparisonMetricsLabel,
+            modifier = Modifier.testTag(ShotHistoryScreenTestTags.historyRowMetrics(item.id)),
             style = historyMutedStyle()
         )
     }
@@ -648,6 +649,9 @@ object ShotHistoryScreenTestTags {
     const val METADATA_VALIDATION_MESSAGE = "ShotFeedbackValidationMessage"
 
     fun historyRow(id: String): String = "ShotHistoryRow_$id"
+    fun historyRowTitle(id: String): String = "ShotHistoryRowTitle_$id"
+    fun historyRowMetadata(id: String): String = "ShotHistoryRowMetadata_$id"
+    fun historyRowMetrics(id: String): String = "ShotHistoryRowMetrics_$id"
 }
 
 @Preview
