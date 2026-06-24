@@ -3,6 +3,7 @@ package com.example.espressoshotcapture.history
 import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -16,6 +17,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -34,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.espressoshotcapture.EspressoShotCaptureApplication
+import com.example.espressoshotcapture.capture.domain.TasteDirection
 import com.example.espressoshotcapture.ui.SectionContainer
 
 private const val MAX_VISIBLE_HISTORY_ROWS = 3
@@ -64,6 +67,13 @@ fun ShotHistoryRoute(
     ShotHistoryScreen(
         uiState = uiState,
         onShotSelected = viewModel::selectShot,
+        onMetadataRatingChange = viewModel::updateMetadataRating,
+        onMetadataTasteDirectionChange = viewModel::updateMetadataTasteDirection,
+        onMetadataGrindSettingChange = viewModel::updateMetadataGrindSetting,
+        onMetadataBeanNameChange = viewModel::updateMetadataBeanName,
+        onMetadataNotesChange = viewModel::updateMetadataNotes,
+        onMetadataSave = viewModel::saveShotUserMetadata,
+        onMetadataClear = viewModel::clearShotUserMetadata,
         modifier = modifier
     )
 }
@@ -72,12 +82,27 @@ fun ShotHistoryRoute(
 fun ShotHistoryScreen(
     uiState: ShotHistoryUiState,
     onShotSelected: (String) -> Unit = {},
+    onMetadataRatingChange: (String) -> Unit = {},
+    onMetadataTasteDirectionChange: (TasteDirection?) -> Unit = {},
+    onMetadataGrindSettingChange: (String) -> Unit = {},
+    onMetadataBeanNameChange: (String) -> Unit = {},
+    onMetadataNotesChange: (String) -> Unit = {},
+    onMetadataSave: () -> Unit = {},
+    onMetadataClear: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     ShotHistoryScreen(
         items = uiState.items,
         selectedShotDetail = uiState.selectedShotDetail,
+        metadataEditor = uiState.metadataEditor,
         onShotSelected = onShotSelected,
+        onMetadataRatingChange = onMetadataRatingChange,
+        onMetadataTasteDirectionChange = onMetadataTasteDirectionChange,
+        onMetadataGrindSettingChange = onMetadataGrindSettingChange,
+        onMetadataBeanNameChange = onMetadataBeanNameChange,
+        onMetadataNotesChange = onMetadataNotesChange,
+        onMetadataSave = onMetadataSave,
+        onMetadataClear = onMetadataClear,
         modifier = modifier
     )
 }
@@ -86,7 +111,17 @@ fun ShotHistoryScreen(
 fun ShotHistoryScreen(
     items: List<ShotHistoryItem>,
     selectedShotDetail: ShotHistoryDetail? = null,
+    metadataEditor: ShotUserMetadataEditorState? = selectedShotDetail?.let { detail ->
+        ShotUserMetadataEditorState(shotId = detail.id)
+    },
     onShotSelected: (String) -> Unit = {},
+    onMetadataRatingChange: (String) -> Unit = {},
+    onMetadataTasteDirectionChange: (TasteDirection?) -> Unit = {},
+    onMetadataGrindSettingChange: (String) -> Unit = {},
+    onMetadataBeanNameChange: (String) -> Unit = {},
+    onMetadataNotesChange: (String) -> Unit = {},
+    onMetadataSave: () -> Unit = {},
+    onMetadataClear: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
@@ -114,12 +149,32 @@ fun ShotHistoryScreen(
                 }
             }
         }
-        ShotHistoryDetailSection(detail = selectedShotDetail)
+        ShotHistoryDetailSection(
+            detail = selectedShotDetail,
+            metadataEditor = metadataEditor,
+            onMetadataRatingChange = onMetadataRatingChange,
+            onMetadataTasteDirectionChange = onMetadataTasteDirectionChange,
+            onMetadataGrindSettingChange = onMetadataGrindSettingChange,
+            onMetadataBeanNameChange = onMetadataBeanNameChange,
+            onMetadataNotesChange = onMetadataNotesChange,
+            onMetadataSave = onMetadataSave,
+            onMetadataClear = onMetadataClear
+        )
     }
 }
 
 @Composable
-private fun ShotHistoryDetailSection(detail: ShotHistoryDetail?) {
+private fun ShotHistoryDetailSection(
+    detail: ShotHistoryDetail?,
+    metadataEditor: ShotUserMetadataEditorState?,
+    onMetadataRatingChange: (String) -> Unit,
+    onMetadataTasteDirectionChange: (TasteDirection?) -> Unit,
+    onMetadataGrindSettingChange: (String) -> Unit,
+    onMetadataBeanNameChange: (String) -> Unit,
+    onMetadataNotesChange: (String) -> Unit,
+    onMetadataSave: () -> Unit,
+    onMetadataClear: () -> Unit
+) {
     SectionContainer(title = "Selected Shot Detail") {
         if (detail == null) {
             BasicText(
@@ -129,7 +184,17 @@ private fun ShotHistoryDetailSection(detail: ShotHistoryDetail?) {
             )
         } else {
             Box(modifier = Modifier.testTag(ShotHistoryScreenTestTags.SELECTED_DETAIL)) {
-                ShotHistoryDetailView(detail = detail)
+                ShotHistoryDetailView(
+                    detail = detail,
+                    metadataEditor = metadataEditor,
+                    onMetadataRatingChange = onMetadataRatingChange,
+                    onMetadataTasteDirectionChange = onMetadataTasteDirectionChange,
+                    onMetadataGrindSettingChange = onMetadataGrindSettingChange,
+                    onMetadataBeanNameChange = onMetadataBeanNameChange,
+                    onMetadataNotesChange = onMetadataNotesChange,
+                    onMetadataSave = onMetadataSave,
+                    onMetadataClear = onMetadataClear
+                )
             }
         }
     }
@@ -179,6 +244,14 @@ private fun ShotHistoryRow(
 @Composable
 private fun ShotHistoryDetailView(
     detail: ShotHistoryDetail,
+    metadataEditor: ShotUserMetadataEditorState?,
+    onMetadataRatingChange: (String) -> Unit,
+    onMetadataTasteDirectionChange: (TasteDirection?) -> Unit,
+    onMetadataGrindSettingChange: (String) -> Unit,
+    onMetadataBeanNameChange: (String) -> Unit,
+    onMetadataNotesChange: (String) -> Unit,
+    onMetadataSave: () -> Unit,
+    onMetadataClear: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var isRawJsonVisible by remember { mutableStateOf(false) }
@@ -209,6 +282,18 @@ private fun ShotHistoryDetailView(
         ) {
             DetailMetricRow(primary = detail.sourceLabel, secondary = detail.qualityLabel)
             DetailMetricRow(primary = detail.sampleCountLabel, secondary = detail.createdLabel)
+        }
+        if (metadataEditor != null) {
+            ShotMetadataEditor(
+                editor = metadataEditor,
+                onRatingChange = onMetadataRatingChange,
+                onTasteDirectionChange = onMetadataTasteDirectionChange,
+                onGrindSettingChange = onMetadataGrindSettingChange,
+                onBeanNameChange = onMetadataBeanNameChange,
+                onNotesChange = onMetadataNotesChange,
+                onSave = onMetadataSave,
+                onClear = onMetadataClear
+            )
         }
         BasicText(
             text = if (isRawJsonVisible) {
@@ -248,6 +333,200 @@ private fun ShotHistoryDetailView(
             }
         }
     }
+}
+
+@Composable
+private fun ShotMetadataEditor(
+    editor: ShotUserMetadataEditorState,
+    onRatingChange: (String) -> Unit,
+    onTasteDirectionChange: (TasteDirection?) -> Unit,
+    onGrindSettingChange: (String) -> Unit,
+    onBeanNameChange: (String) -> Unit,
+    onNotesChange: (String) -> Unit,
+    onSave: () -> Unit,
+    onClear: () -> Unit
+) {
+    DetailGroup(
+        title = "Shot feedback",
+        modifier = Modifier.testTag(ShotHistoryScreenTestTags.METADATA_EDITOR)
+    ) {
+        MetadataInput(
+            label = "Rating 1-5",
+            value = editor.ratingText,
+            onValueChange = onRatingChange,
+            testTag = ShotHistoryScreenTestTags.METADATA_RATING_INPUT
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        BasicText(text = "Taste direction", style = historyMutedStyle())
+        Spacer(modifier = Modifier.height(4.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            TasteDirectionChip(
+                label = "None",
+                selected = editor.tasteDirection == null,
+                testTag = ShotHistoryScreenTestTags.METADATA_TASTE_NONE,
+                onClick = { onTasteDirectionChange(null) },
+                modifier = Modifier.weight(1f)
+            )
+            TasteDirectionChip(
+                label = "Sour",
+                selected = editor.tasteDirection == TasteDirection.SOUR,
+                testTag = ShotHistoryScreenTestTags.METADATA_TASTE_SOUR,
+                onClick = { onTasteDirectionChange(TasteDirection.SOUR) },
+                modifier = Modifier.weight(1f)
+            )
+            TasteDirectionChip(
+                label = "Balanced",
+                selected = editor.tasteDirection == TasteDirection.BALANCED,
+                testTag = ShotHistoryScreenTestTags.METADATA_TASTE_BALANCED,
+                onClick = { onTasteDirectionChange(TasteDirection.BALANCED) },
+                modifier = Modifier.weight(1f)
+            )
+            TasteDirectionChip(
+                label = "Bitter",
+                selected = editor.tasteDirection == TasteDirection.BITTER,
+                testTag = ShotHistoryScreenTestTags.METADATA_TASTE_BITTER,
+                onClick = { onTasteDirectionChange(TasteDirection.BITTER) },
+                modifier = Modifier.weight(1f)
+            )
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        MetadataInput(
+            label = "Grind setting",
+            value = editor.grindSetting,
+            onValueChange = onGrindSettingChange,
+            testTag = ShotHistoryScreenTestTags.METADATA_GRIND_INPUT
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        MetadataInput(
+            label = "Bean name",
+            value = editor.beanName,
+            onValueChange = onBeanNameChange,
+            testTag = ShotHistoryScreenTestTags.METADATA_BEAN_INPUT
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        MetadataInput(
+            label = "Notes",
+            value = editor.notes,
+            onValueChange = onNotesChange,
+            testTag = ShotHistoryScreenTestTags.METADATA_NOTES_INPUT,
+            singleLine = false
+        )
+        if (editor.validationMessage != null) {
+            BasicText(
+                text = editor.validationMessage,
+                modifier = Modifier
+                    .padding(top = 8.dp)
+                    .testTag(ShotHistoryScreenTestTags.METADATA_VALIDATION_MESSAGE),
+                style = historyMutedStyle()
+            )
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            MetadataAction(
+                text = "Save feedback",
+                modifier = Modifier
+                    .weight(1f)
+                    .testTag(ShotHistoryScreenTestTags.METADATA_SAVE_ACTION)
+                    .clickable(onClick = onSave)
+            )
+            MetadataAction(
+                text = "Clear",
+                modifier = Modifier
+                    .weight(1f)
+                    .testTag(ShotHistoryScreenTestTags.METADATA_CLEAR_ACTION)
+                    .clickable(onClick = onClear)
+            )
+        }
+    }
+}
+
+@Composable
+private fun MetadataInput(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    testTag: String,
+    singleLine: Boolean = true
+) {
+    Column {
+        BasicText(text = label, style = historyMutedStyle())
+        Spacer(modifier = Modifier.height(4.dp))
+        BasicTextField(
+            value = value,
+            onValueChange = onValueChange,
+            singleLine = singleLine,
+            textStyle = historyStrongStyle(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag(testTag)
+                .background(
+                    color = Color(0xFF0F1114),
+                    shape = RoundedCornerShape(6.dp)
+                )
+                .border(
+                    width = 1.dp,
+                    color = Color(0xFF3A414A),
+                    shape = RoundedCornerShape(6.dp)
+                )
+                .padding(horizontal = 8.dp, vertical = 7.dp)
+        )
+    }
+}
+
+@Composable
+private fun TasteDirectionChip(
+    label: String,
+    selected: Boolean,
+    testTag: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    BasicText(
+        text = label,
+        modifier = modifier
+            .testTag(testTag)
+            .clickable(onClick = onClick)
+            .background(
+                color = if (selected) Color(0xFF244033) else Color(0xFF0F1114),
+                shape = RoundedCornerShape(6.dp)
+            )
+            .border(
+                width = 1.dp,
+                color = if (selected) Color(0xFF5DCB8A) else Color(0xFF3A414A),
+                shape = RoundedCornerShape(6.dp)
+            )
+            .padding(horizontal = 8.dp, vertical = 7.dp),
+        style = historyBodyStyle()
+    )
+}
+
+@Composable
+private fun MetadataAction(
+    text: String,
+    modifier: Modifier = Modifier
+) {
+    BasicText(
+        text = text,
+        modifier = modifier
+            .background(
+                color = Color(0xFF24282E),
+                shape = RoundedCornerShape(6.dp)
+            )
+            .border(
+                width = 1.dp,
+                color = Color(0xFF3A414A),
+                shape = RoundedCornerShape(6.dp)
+            )
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+        style = historyActionStyle()
+    )
 }
 
 @Composable
@@ -355,6 +634,18 @@ object ShotHistoryScreenTestTags {
     const val DETAIL_DATA_CONFIDENCE = "ShotDetailDataConfidence"
     const val RAW_JSON_TOGGLE = "ShotDetailRawJsonToggle"
     const val RAW_JSON = "ShotDetailRawJsonContent"
+    const val METADATA_EDITOR = "ShotFeedbackSection"
+    const val METADATA_RATING_INPUT = "ShotFeedbackRating"
+    const val METADATA_TASTE_NONE = "ShotFeedbackTasteNone"
+    const val METADATA_TASTE_SOUR = "ShotFeedbackTasteSour"
+    const val METADATA_TASTE_BALANCED = "ShotFeedbackTasteBalanced"
+    const val METADATA_TASTE_BITTER = "ShotFeedbackTasteBitter"
+    const val METADATA_GRIND_INPUT = "ShotFeedbackGrindSetting"
+    const val METADATA_BEAN_INPUT = "ShotFeedbackBeanName"
+    const val METADATA_NOTES_INPUT = "ShotFeedbackNotes"
+    const val METADATA_SAVE_ACTION = "ShotFeedbackSave"
+    const val METADATA_CLEAR_ACTION = "ShotFeedbackClear"
+    const val METADATA_VALIDATION_MESSAGE = "ShotFeedbackValidationMessage"
 
     fun historyRow(id: String): String = "ShotHistoryRow_$id"
 }

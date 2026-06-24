@@ -1,8 +1,11 @@
 package com.example.espressoshotcapture.history
 
+import com.example.espressoshotcapture.capture.domain.TasteDirection
+
 data class ShotHistoryUiState(
     val items: List<ShotHistoryItem>,
-    val selectedShotDetail: ShotHistoryDetail? = null
+    val selectedShotDetail: ShotHistoryDetail? = null,
+    val metadataEditor: ShotUserMetadataEditorState? = null
 )
 
 data class ShotHistoryDetail(
@@ -20,4 +23,14 @@ data class ShotHistoryDetail(
     val ratioLabel: String = ShotHistoryMapper.UNKNOWN_RATIO_LABEL,
     val averageFlowLabel: String = ShotHistoryMapper.UNKNOWN_AVERAGE_FLOW_LABEL,
     val targetReachedLabel: String = ShotHistoryMapper.UNKNOWN_TARGET_REACHED_LABEL
+)
+
+data class ShotUserMetadataEditorState(
+    val shotId: String,
+    val ratingText: String = "",
+    val tasteDirection: TasteDirection? = null,
+    val grindSetting: String = "",
+    val beanName: String = "",
+    val notes: String = "",
+    val validationMessage: String? = null
 )

@@ -99,6 +99,45 @@ class ShotDaoTest {
         assertEquals(json, dao.getShotById(draft.id)?.json)
     }
 
+    @Test
+    fun updateShotUserMetadataUpdatesOnlyMetadataColumns() {
+        val shot = shotEntity(id = "shot-1", createdAtEpochMillis = 1_234L)
+        dao.insertShot(shot)
+
+        val updatedRows = dao.updateShotUserMetadata(
+            id = "shot-1",
+            rating = 4,
+            tasteDirection = "BALANCED",
+            grindSetting = "8.10",
+            beanName = "Ethiopia Guji",
+            notes = "Sweet"
+        )
+
+        val updated = requireNotNull(dao.getShotById("shot-1"))
+        assertEquals(1, updatedRows)
+        assertEquals(shot.json, updated.json)
+        assertEquals(shot.createdAtEpochMillis, updated.createdAtEpochMillis)
+        assertEquals(4, updated.rating)
+        assertEquals("BALANCED", updated.tasteDirection)
+        assertEquals("8.10", updated.grindSetting)
+        assertEquals("Ethiopia Guji", updated.beanName)
+        assertEquals("Sweet", updated.notes)
+    }
+
+    @Test
+    fun updateShotUserMetadataReturnsZeroWhenShotIdIsMissing() {
+        val updatedRows = dao.updateShotUserMetadata(
+            id = "missing-shot",
+            rating = null,
+            tasteDirection = null,
+            grindSetting = null,
+            beanName = null,
+            notes = null
+        )
+
+        assertEquals(0, updatedRows)
+    }
+
     private fun shotEntity(
         id: String,
         createdAtEpochMillis: Long = 1_000L

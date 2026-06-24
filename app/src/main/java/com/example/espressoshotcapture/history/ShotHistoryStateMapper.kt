@@ -1,18 +1,32 @@
 package com.example.espressoshotcapture.history
 
 import com.example.espressoshotcapture.persistence.ShotEntity
+import com.example.espressoshotcapture.repository.ShotEntityMapper
 
 object ShotHistoryStateMapper {
     fun fromEntities(
         entities: List<ShotEntity>,
         selectedShotId: String? = null
-    ): ShotHistoryUiState =
-        ShotHistoryUiState(
+    ): ShotHistoryUiState {
+        val selectedEntity = entities.firstOrNull { entity -> entity.id == selectedShotId }
+        return ShotHistoryUiState(
             items = ShotHistoryMapper.fromEntities(entities),
-            selectedShotDetail = entities
-                .firstOrNull { entity -> entity.id == selectedShotId }
-                ?.toDetail()
+            selectedShotDetail = selectedEntity?.toDetail(),
+            metadataEditor = selectedEntity?.toMetadataEditor()
         )
+    }
+
+    private fun ShotEntity.toMetadataEditor(): ShotUserMetadataEditorState {
+        val metadata = ShotEntityMapper.toUserMetadata(this)
+        return ShotUserMetadataEditorState(
+            shotId = id,
+            ratingText = metadata.rating?.toString().orEmpty(),
+            tasteDirection = metadata.tasteDirection,
+            grindSetting = metadata.grindSetting.orEmpty(),
+            beanName = metadata.beanName.orEmpty(),
+            notes = metadata.notes.orEmpty()
+        )
+    }
 
     private fun ShotEntity.toDetail(): ShotHistoryDetail =
         ShotHistoryMapper.summaryFromJson(json).let { summary ->

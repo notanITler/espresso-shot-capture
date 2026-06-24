@@ -1,9 +1,15 @@
 package com.example.espressoshotcapture.history
 
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -11,7 +17,10 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performTextInput
+import com.example.espressoshotcapture.capture.domain.TasteDirection
 import com.example.espressoshotcapture.MainActivity
 import org.junit.Rule
 import org.junit.Test
@@ -64,7 +73,7 @@ class ShotHistoryScreenTest {
 
     @Test
     fun uiStateCanRenderHistoryItems() {
-        composeTestRule.activity.setContent {
+        setScrollableContent {
             ShotHistoryScreen(
                 uiState = ShotHistoryUiState(
                     items = listOf(
@@ -120,7 +129,7 @@ class ShotHistoryScreenTest {
             ShotHistoryItem(id = "shot-2000", createdAtEpochMillis = 2_000L)
         )
 
-        composeTestRule.activity.setContent {
+        setScrollableContent {
             ShotHistoryScreen(
                 items = items,
                 selectedShotDetail = selectedDetail.value,
@@ -173,9 +182,285 @@ class ShotHistoryScreenTest {
         composeTestRule.onAllNodesWithText(json).assertCountEquals(0)
     }
 
+    @Test
+    fun metadataEditorAppearsInSelectedShotDetail() {
+        selectShotWithMetadataEditor(
+            detail = shotDetail(),
+            metadataEditor = ShotUserMetadataEditorState(shotId = "shot-2000")
+        )
+
+        composeTestRule.onAllNodesWithTag(ShotHistoryScreenTestTags.METADATA_EDITOR).assertCountEquals(1)
+        composeTestRule
+            .onNodeWithTag(ShotHistoryScreenTestTags.METADATA_EDITOR)
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeTestRule
+            .onNodeWithTag(ShotHistoryScreenTestTags.METADATA_RATING_INPUT)
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeTestRule
+            .onNodeWithTag(ShotHistoryScreenTestTags.METADATA_TASTE_SOUR)
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeTestRule
+            .onNodeWithTag(ShotHistoryScreenTestTags.METADATA_TASTE_BALANCED)
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeTestRule
+            .onNodeWithTag(ShotHistoryScreenTestTags.METADATA_TASTE_BITTER)
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeTestRule
+            .onNodeWithTag(ShotHistoryScreenTestTags.METADATA_GRIND_INPUT)
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeTestRule
+            .onNodeWithTag(ShotHistoryScreenTestTags.METADATA_BEAN_INPUT)
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeTestRule
+            .onNodeWithTag(ShotHistoryScreenTestTags.METADATA_NOTES_INPUT)
+            .performScrollTo()
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun emptyMetadataRendersEmptyOptionalFields() {
+        selectShotWithMetadataEditor(
+            detail = shotDetail(),
+            metadataEditor = ShotUserMetadataEditorState(shotId = "shot-2000")
+        )
+
+        composeTestRule
+            .onNodeWithTag(ShotHistoryScreenTestTags.METADATA_RATING_INPUT)
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeTestRule
+            .onNodeWithTag(ShotHistoryScreenTestTags.METADATA_GRIND_INPUT)
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeTestRule
+            .onNodeWithTag(ShotHistoryScreenTestTags.METADATA_BEAN_INPUT)
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeTestRule
+            .onNodeWithTag(ShotHistoryScreenTestTags.METADATA_NOTES_INPUT)
+            .performScrollTo()
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun existingMetadataPrefillsFields() {
+        selectShotWithMetadataEditor(
+            detail = shotDetail(),
+            metadataEditor = ShotUserMetadataEditorState(
+                shotId = "shot-2000",
+                ratingText = "4",
+                tasteDirection = TasteDirection.BALANCED,
+                grindSetting = "8.10",
+                beanName = "Ethiopia Guji",
+                notes = "Sweet and clear"
+            )
+        )
+
+        composeTestRule
+            .onNodeWithTag(ShotHistoryScreenTestTags.METADATA_RATING_INPUT)
+            .performScrollTo()
+            .assertTextEquals("4")
+        composeTestRule
+            .onNodeWithTag(ShotHistoryScreenTestTags.METADATA_GRIND_INPUT)
+            .performScrollTo()
+            .assertTextEquals("8.10")
+        composeTestRule
+            .onNodeWithTag(ShotHistoryScreenTestTags.METADATA_BEAN_INPUT)
+            .performScrollTo()
+            .assertTextEquals("Ethiopia Guji")
+        composeTestRule
+            .onNodeWithTag(ShotHistoryScreenTestTags.METADATA_NOTES_INPUT)
+            .performScrollTo()
+            .assertTextEquals("Sweet and clear")
+    }
+
+    @Test
+    fun saveUpdatesDisplayedMetadata() {
+        val editor = mutableStateOf(ShotUserMetadataEditorState(shotId = "shot-2000"))
+        val selectedDetail = mutableStateOf<ShotHistoryDetail?>(null)
+        val selectedEditor = mutableStateOf<ShotUserMetadataEditorState?>(null)
+        setScrollableContent {
+            ShotHistoryScreen(
+                items = listOf(ShotHistoryItem(id = "shot-2000", createdAtEpochMillis = 2_000L)),
+                selectedShotDetail = selectedDetail.value,
+                metadataEditor = selectedEditor.value,
+                onShotSelected = {
+                    selectedDetail.value = shotDetail()
+                    selectedEditor.value = editor.value
+                },
+                onMetadataGrindSettingChange = { value ->
+                    editor.value = editor.value.copy(grindSetting = value)
+                    selectedEditor.value = editor.value
+                },
+                onMetadataSave = {
+                    editor.value = editor.value.copy(validationMessage = "Shot feedback saved")
+                    selectedEditor.value = editor.value
+                }
+            )
+        }
+        composeTestRule
+            .onNodeWithTag(ShotHistoryScreenTestTags.historyRow("shot-2000"))
+            .performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule
+            .onNodeWithTag(ShotHistoryScreenTestTags.METADATA_GRIND_INPUT)
+            .performScrollTo()
+            .performTextInput("8.10")
+        composeTestRule
+            .onNodeWithTag(ShotHistoryScreenTestTags.METADATA_SAVE_ACTION)
+            .performScrollTo()
+            .performClick()
+
+        composeTestRule
+            .onNodeWithTag(ShotHistoryScreenTestTags.METADATA_GRIND_INPUT)
+            .performScrollTo()
+            .assertTextEquals("8.10")
+        composeTestRule.onNodeWithText("Shot feedback saved").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun invalidMetadataShowsValidationMessage() {
+        selectShotWithMetadataEditor(
+            detail = shotDetail(),
+            metadataEditor = ShotUserMetadataEditorState(
+                shotId = "shot-2000",
+                grindSetting = "eight",
+                validationMessage = "Grind setting must be a decimal value"
+            )
+        )
+
+        composeTestRule
+            .onNodeWithTag(ShotHistoryScreenTestTags.METADATA_VALIDATION_MESSAGE)
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeTestRule
+            .onNodeWithText("Grind setting must be a decimal value")
+            .performScrollTo()
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun clearActionClearsMetadataFields() {
+        val editor = mutableStateOf(
+            ShotUserMetadataEditorState(
+                shotId = "shot-2000",
+                ratingText = "5",
+                grindSetting = "8.10",
+                beanName = "Kenya AA",
+                notes = "Bright"
+            )
+        )
+        val selectedDetail = mutableStateOf<ShotHistoryDetail?>(null)
+        val selectedEditor = mutableStateOf<ShotUserMetadataEditorState?>(null)
+        setScrollableContent {
+            ShotHistoryScreen(
+                items = listOf(ShotHistoryItem(id = "shot-2000", createdAtEpochMillis = 2_000L)),
+                selectedShotDetail = selectedDetail.value,
+                metadataEditor = selectedEditor.value,
+                onShotSelected = {
+                    selectedDetail.value = shotDetail()
+                    selectedEditor.value = editor.value
+                },
+                onMetadataClear = {
+                    editor.value = ShotUserMetadataEditorState(
+                        shotId = "shot-2000",
+                        validationMessage = "Shot feedback cleared"
+                    )
+                    selectedEditor.value = editor.value
+                }
+            )
+        }
+        composeTestRule
+            .onNodeWithTag(ShotHistoryScreenTestTags.historyRow("shot-2000"))
+            .performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule
+            .onNodeWithTag(ShotHistoryScreenTestTags.METADATA_CLEAR_ACTION)
+            .performScrollTo()
+            .performClick()
+
+        composeTestRule.onNodeWithText("Shot feedback cleared").performScrollTo().assertIsDisplayed()
+        composeTestRule
+            .onNodeWithTag(ShotHistoryScreenTestTags.METADATA_RATING_INPUT)
+            .performScrollTo()
+            .assertTextEquals("")
+        composeTestRule
+            .onNodeWithTag(ShotHistoryScreenTestTags.METADATA_GRIND_INPUT)
+            .performScrollTo()
+            .assertTextEquals("")
+        composeTestRule
+            .onNodeWithTag(ShotHistoryScreenTestTags.METADATA_BEAN_INPUT)
+            .performScrollTo()
+            .assertTextEquals("")
+        composeTestRule
+            .onNodeWithTag(ShotHistoryScreenTestTags.METADATA_NOTES_INPUT)
+            .performScrollTo()
+            .assertTextEquals("")
+    }
+
     private fun setHistoryContent(items: List<ShotHistoryItem>) {
-        composeTestRule.activity.setContent {
+        setScrollableContent {
             ShotHistoryScreen(items = items)
         }
     }
+
+    private fun selectShotWithMetadataEditor(
+        detail: ShotHistoryDetail,
+        metadataEditor: ShotUserMetadataEditorState
+    ) {
+        val selectedDetail = mutableStateOf<ShotHistoryDetail?>(null)
+        val selectedEditor = mutableStateOf<ShotUserMetadataEditorState?>(null)
+        setScrollableContent {
+            ShotHistoryScreen(
+                items = listOf(ShotHistoryItem(id = detail.id, createdAtEpochMillis = detail.createdAtEpochMillis)),
+                selectedShotDetail = selectedDetail.value,
+                metadataEditor = selectedEditor.value,
+                onShotSelected = {
+                    selectedDetail.value = detail
+                    selectedEditor.value = metadataEditor
+                }
+            )
+        }
+        composeTestRule
+            .onNodeWithTag(ShotHistoryScreenTestTags.historyRow(detail.id))
+            .performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule
+            .onNodeWithTag(ShotHistoryScreenTestTags.METADATA_EDITOR)
+            .performScrollTo()
+    }
+
+    private fun setScrollableContent(content: @Composable () -> Unit) {
+        composeTestRule.activity.setContent {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                content()
+            }
+        }
+    }
+
+    private fun shotDetail(): ShotHistoryDetail =
+        ShotHistoryDetail(
+            id = "shot-2000",
+            createdAtEpochMillis = 2_000L,
+            json = """{"schemaVersion":1,"shot":{"id":"shot-2000"}}""",
+            sourceLabel = "Source: Decent Scale",
+            qualityLabel = "Data status: Complete",
+            finalYieldLabel = "Yield: 36.8 g",
+            flowTimeLabel = "Flow time: 28 s",
+            targetYieldLabel = "Target: 36.0 g",
+            ratioLabel = "Ratio: 1:2",
+            averageFlowLabel = "Average flow: 1.3 g/s",
+            sampleCountLabel = "Weight readings: 4",
+            doseLabel = "Dose: 18.0 g",
+            targetReachedLabel = "Target reached: yes"
+        )
 }
