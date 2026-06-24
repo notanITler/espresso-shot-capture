@@ -5,8 +5,29 @@ import com.example.espressoshotcapture.capture.domain.TasteDirection
 data class ShotHistoryUiState(
     val items: List<ShotHistoryItem>,
     val selectedShotDetail: ShotHistoryDetail? = null,
-    val metadataEditor: ShotUserMetadataEditorState? = null
+    val metadataEditor: ShotUserMetadataEditorState? = null,
+    val beanFilterOptions: List<ShotHistoryBeanFilterOption> = listOf(
+        ShotHistoryBeanFilterOption(
+            key = ShotHistoryBeanFilterKeys.ALL,
+            label = "All shots",
+            isSelected = true
+        )
+    )
 )
+
+data class ShotHistoryBeanFilterOption(
+    val key: String,
+    val label: String,
+    val isSelected: Boolean
+)
+
+object ShotHistoryBeanFilterKeys {
+    const val ALL: String = "all"
+    const val UNASSIGNED: String = "unassigned"
+
+    fun bean(normalizedBeanName: String): String =
+        "bean:$normalizedBeanName"
+}
 
 data class ShotHistoryDetail(
     val id: String,

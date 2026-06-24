@@ -22,17 +22,20 @@ class ShotHistoryViewModel(
     private val metadataWriteDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : ViewModel() {
     private val selectedShotId = MutableStateFlow<String?>(null)
+    private val selectedBeanFilterKey = MutableStateFlow(ShotHistoryBeanFilterKeys.ALL)
     private val metadataEditorOverride = MutableStateFlow<ShotUserMetadataEditorState?>(null)
 
     val uiState: StateFlow<ShotHistoryUiState> =
         combine(
             shotRepository.observeShots(),
             selectedShotId,
+            selectedBeanFilterKey,
             metadataEditorOverride
-        ) { entities, selectedId, editorOverride ->
+        ) { entities, selectedId, beanFilterKey, editorOverride ->
             val mappedState = ShotHistoryStateMapper.fromEntities(
                 entities = entities,
-                selectedShotId = selectedId
+                selectedShotId = selectedId,
+                selectedBeanFilterKey = beanFilterKey
             )
             mappedState.copy(
                 metadataEditor = if (editorOverride?.shotId == selectedId) {
@@ -49,6 +52,12 @@ class ShotHistoryViewModel(
 
     fun selectShot(id: String) {
         selectedShotId.value = id
+        metadataEditorOverride.value = null
+    }
+
+    fun selectBeanFilter(key: String) {
+        selectedBeanFilterKey.value = key
+        selectedShotId.value = null
         metadataEditorOverride.value = null
     }
 

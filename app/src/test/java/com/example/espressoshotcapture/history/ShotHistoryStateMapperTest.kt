@@ -25,6 +25,18 @@ class ShotHistoryStateMapperTest {
                         createdAtEpochMillis = 2_000L,
                         qualityLabel = "Data status: Missing target"
                     )
+                ),
+                beanFilterOptions = listOf(
+                    ShotHistoryBeanFilterOption(
+                        key = ShotHistoryBeanFilterKeys.ALL,
+                        label = "All shots",
+                        isSelected = true
+                    ),
+                    ShotHistoryBeanFilterOption(
+                        key = ShotHistoryBeanFilterKeys.UNASSIGNED,
+                        label = "Unassigned",
+                        isSelected = false
+                    )
                 )
             ),
             ShotHistoryStateMapper.fromEntities(entities)
@@ -51,6 +63,82 @@ class ShotHistoryStateMapperTest {
             listOf("shot-3", "shot-1", "shot-2"),
             ShotHistoryStateMapper.fromEntities(entities).items.map { it.id }
         )
+    }
+
+    @Test
+    fun beanFilterShowsOnlyMatchingBeanShots() {
+        val entities = listOf(
+            shotEntity(id = "shot-delta", createdAtEpochMillis = 3_000L, beanName = "Delta"),
+            shotEntity(id = "shot-hannover", createdAtEpochMillis = 2_000L, beanName = "Hannover"),
+            shotEntity(id = "shot-empty", createdAtEpochMillis = 1_000L)
+        )
+
+        val uiState = ShotHistoryStateMapper.fromEntities(
+            entities = entities,
+            selectedBeanFilterKey = ShotHistoryBeanFilterKeys.bean("delta")
+        )
+
+        assertEquals(listOf("shot-delta"), uiState.items.map { item -> item.id })
+        assertEquals(
+            listOf(
+                ShotHistoryBeanFilterOption("all", "All shots", false),
+                ShotHistoryBeanFilterOption("unassigned", "Unassigned", false),
+                ShotHistoryBeanFilterOption("bean:delta", "Delta", true),
+                ShotHistoryBeanFilterOption("bean:hannover", "Hannover", false)
+            ),
+            uiState.beanFilterOptions
+        )
+    }
+
+    @Test
+    fun unassignedFilterShowsShotsWithoutBeanName() {
+        val entities = listOf(
+            shotEntity(id = "shot-delta", createdAtEpochMillis = 3_000L, beanName = "Delta"),
+            shotEntity(id = "shot-empty", createdAtEpochMillis = 2_000L),
+            shotEntity(id = "shot-blank", createdAtEpochMillis = 1_000L, beanName = "   ")
+        )
+
+        val uiState = ShotHistoryStateMapper.fromEntities(
+            entities = entities,
+            selectedBeanFilterKey = ShotHistoryBeanFilterKeys.UNASSIGNED
+        )
+
+        assertEquals(listOf("shot-empty", "shot-blank"), uiState.items.map { item -> item.id })
+    }
+
+    @Test
+    fun caseAndWhitespaceBeanNamesShareOneFilterOption() {
+        val entities = listOf(
+            shotEntity(id = "shot-1", createdAtEpochMillis = 1_000L, beanName = "Delta"),
+            shotEntity(id = "shot-2", createdAtEpochMillis = 2_000L, beanName = " delta ")
+        )
+
+        val uiState = ShotHistoryStateMapper.fromEntities(entities)
+
+        assertEquals(
+            listOf(
+                ShotHistoryBeanFilterOption("all", "All shots", true),
+                ShotHistoryBeanFilterOption("bean:delta", "Delta", false)
+            ),
+            uiState.beanFilterOptions
+        )
+    }
+
+    @Test
+    fun selectedShotDetailIsClearedWhenFilteredOut() {
+        val entities = listOf(
+            shotEntity(id = "shot-delta", createdAtEpochMillis = 1_000L, beanName = "Delta"),
+            shotEntity(id = "shot-hannover", createdAtEpochMillis = 2_000L, beanName = "Hannover")
+        )
+
+        val uiState = ShotHistoryStateMapper.fromEntities(
+            entities = entities,
+            selectedShotId = "shot-hannover",
+            selectedBeanFilterKey = ShotHistoryBeanFilterKeys.bean("delta")
+        )
+
+        assertEquals(null, uiState.selectedShotDetail)
+        assertEquals(null, uiState.metadataEditor)
     }
 
     @Test
@@ -156,11 +244,13 @@ class ShotHistoryStateMapperTest {
     private fun shotEntity(
         id: String,
         createdAtEpochMillis: Long,
-        json: String = """{"schemaVersion":1,"shot":{"id":"$id"}}"""
+        json: String = """{"schemaVersion":1,"shot":{"id":"$id"}}""",
+        beanName: String? = null
     ): ShotEntity =
         ShotEntity(
             id = id,
             json = json,
-            createdAtEpochMillis = createdAtEpochMillis
+            createdAtEpochMillis = createdAtEpochMillis,
+            beanName = beanName
         )
 }

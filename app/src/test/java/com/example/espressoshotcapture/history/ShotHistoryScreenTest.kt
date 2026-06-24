@@ -114,6 +114,112 @@ class ShotHistoryScreenTest {
     }
 
     @Test
+    fun beanFilterShowsOnlyMatchingBeanShots() {
+        val selectedFilter = mutableStateOf(ShotHistoryBeanFilterKeys.ALL)
+        val allItems = comparisonItems()
+        setScrollableContent {
+            ShotHistoryScreen(
+                items = allItems.filterForTest(selectedFilter.value),
+                beanFilterOptions = beanFilterOptionsForTest(selectedFilter.value),
+                onBeanFilterSelected = { key -> selectedFilter.value = key }
+            )
+        }
+
+        composeTestRule
+            .onNodeWithTag(ShotHistoryScreenTestTags.beanFilterOption(ShotHistoryBeanFilterKeys.bean("delta espresso bar")))
+            .performClick()
+
+        composeTestRule.onNodeWithText("Delta Espresso Bar | Rating 4/5").assertIsDisplayed()
+        composeTestRule.onAllNodesWithText("Hannoversche Kaffeemanufaktur | Rating 5/5").assertCountEquals(0)
+        composeTestRule.onAllNodesWithText("Unassigned bean").assertCountEquals(0)
+    }
+
+    @Test
+    fun unassignedFilterShowsShotsWithoutBeanName() {
+        val selectedFilter = mutableStateOf(ShotHistoryBeanFilterKeys.ALL)
+        val allItems = comparisonItems()
+        setScrollableContent {
+            ShotHistoryScreen(
+                items = allItems.filterForTest(selectedFilter.value),
+                beanFilterOptions = beanFilterOptionsForTest(selectedFilter.value),
+                onBeanFilterSelected = { key -> selectedFilter.value = key }
+            )
+        }
+
+        composeTestRule
+            .onNodeWithTag(ShotHistoryScreenTestTags.beanFilterOption(ShotHistoryBeanFilterKeys.UNASSIGNED))
+            .performClick()
+
+        composeTestRule.onNodeWithText("Unassigned bean").assertIsDisplayed()
+        composeTestRule.onAllNodesWithText("Delta Espresso Bar | Rating 4/5").assertCountEquals(0)
+    }
+
+    @Test
+    fun selectingAllRestoresFullHistory() {
+        val selectedFilter = mutableStateOf(ShotHistoryBeanFilterKeys.bean("delta espresso bar"))
+        val allItems = comparisonItems()
+        setScrollableContent {
+            ShotHistoryScreen(
+                items = allItems.filterForTest(selectedFilter.value),
+                beanFilterOptions = beanFilterOptionsForTest(selectedFilter.value),
+                onBeanFilterSelected = { key -> selectedFilter.value = key }
+            )
+        }
+
+        composeTestRule.onNodeWithText("Delta Espresso Bar | Rating 4/5").assertIsDisplayed()
+        composeTestRule
+            .onNodeWithTag(ShotHistoryScreenTestTags.beanFilterOption(ShotHistoryBeanFilterKeys.ALL))
+            .performClick()
+
+        composeTestRule.onNodeWithText("Delta Espresso Bar | Rating 4/5").assertIsDisplayed()
+        composeTestRule
+            .onNodeWithTag(ShotHistoryScreenTestTags.HISTORY_LIST)
+            .performScrollToNode(hasText("Hannoversche Kaffeemanufaktur | Rating 5/5"))
+        composeTestRule.onNodeWithText("Hannoversche Kaffeemanufaktur | Rating 5/5").assertIsDisplayed()
+        composeTestRule
+            .onNodeWithTag(ShotHistoryScreenTestTags.HISTORY_LIST)
+            .performScrollToNode(hasText("Unassigned bean"))
+        composeTestRule.onNodeWithText("Unassigned bean").assertIsDisplayed()
+    }
+
+    @Test
+    fun metadataEditorAppearsAfterFilteringAndSelectingShot() {
+        val selectedFilter = mutableStateOf(ShotHistoryBeanFilterKeys.ALL)
+        val selectedDetail = mutableStateOf<ShotHistoryDetail?>(null)
+        val selectedEditor = mutableStateOf<ShotUserMetadataEditorState?>(null)
+        val allItems = comparisonItems()
+        setScrollableContent {
+            ShotHistoryScreen(
+                items = allItems.filterForTest(selectedFilter.value),
+                beanFilterOptions = beanFilterOptionsForTest(selectedFilter.value),
+                selectedShotDetail = selectedDetail.value,
+                metadataEditor = selectedEditor.value,
+                onBeanFilterSelected = { key ->
+                    selectedFilter.value = key
+                    selectedDetail.value = null
+                    selectedEditor.value = null
+                },
+                onShotSelected = { id ->
+                    selectedDetail.value = shotDetail().copy(id = id)
+                    selectedEditor.value = ShotUserMetadataEditorState(shotId = id)
+                }
+            )
+        }
+
+        composeTestRule
+            .onNodeWithTag(ShotHistoryScreenTestTags.beanFilterOption(ShotHistoryBeanFilterKeys.bean("delta espresso bar")))
+            .performClick()
+        composeTestRule
+            .onNodeWithTag(ShotHistoryScreenTestTags.historyRow("shot-delta"))
+            .performClick()
+
+        composeTestRule
+            .onNodeWithTag(ShotHistoryScreenTestTags.METADATA_EDITOR)
+            .performScrollTo()
+            .assertIsDisplayed()
+    }
+
+    @Test
     fun clickingRowShowsShotDetail() {
         val selectedDetail = mutableStateOf<ShotHistoryDetail?>(null)
         val json = """{"schemaVersion":1,"shot":{"id":"shot-2000"}}"""
@@ -404,6 +510,66 @@ class ShotHistoryScreenTest {
             ShotHistoryScreen(items = items)
         }
     }
+
+    private fun comparisonItems(): List<ShotHistoryItem> =
+        listOf(
+            ShotHistoryItem(
+                id = "shot-delta",
+                createdAtEpochMillis = 3_000L,
+                comparisonTitleLabel = "Delta Espresso Bar | Rating 4/5",
+                comparisonMetadataLabel = "Grind 8.10 | Balanced",
+                comparisonMetricsLabel = "18.0 g -> 36.5 g | 27.8 s | 1.3 g/s"
+            ),
+            ShotHistoryItem(
+                id = "shot-hannover",
+                createdAtEpochMillis = 2_000L,
+                comparisonTitleLabel = "Hannoversche Kaffeemanufaktur | Rating 5/5",
+                comparisonMetadataLabel = "Grind 9.0 | Sour",
+                comparisonMetricsLabel = "18.0 g -> 38.2 g | 29 s | 1.3 g/s"
+            ),
+            ShotHistoryItem(
+                id = "shot-unassigned",
+                createdAtEpochMillis = 1_000L,
+                comparisonTitleLabel = "Unassigned bean",
+                comparisonMetricsLabel = "18.0 g -> 35.8 g | 26 s | 1.4 g/s"
+            )
+        )
+
+    private fun List<ShotHistoryItem>.filterForTest(filterKey: String): List<ShotHistoryItem> =
+        when (filterKey) {
+            ShotHistoryBeanFilterKeys.ALL -> this
+            ShotHistoryBeanFilterKeys.UNASSIGNED ->
+                filter { item -> item.id == "shot-unassigned" }
+            ShotHistoryBeanFilterKeys.bean("delta espresso bar") ->
+                filter { item -> item.id == "shot-delta" }
+            ShotHistoryBeanFilterKeys.bean("hannoversche kaffeemanufaktur") ->
+                filter { item -> item.id == "shot-hannover" }
+            else -> emptyList()
+        }
+
+    private fun beanFilterOptionsForTest(selectedKey: String): List<ShotHistoryBeanFilterOption> =
+        listOf(
+            ShotHistoryBeanFilterOption(
+                key = ShotHistoryBeanFilterKeys.ALL,
+                label = "All shots",
+                isSelected = selectedKey == ShotHistoryBeanFilterKeys.ALL
+            ),
+            ShotHistoryBeanFilterOption(
+                key = ShotHistoryBeanFilterKeys.UNASSIGNED,
+                label = "Unassigned",
+                isSelected = selectedKey == ShotHistoryBeanFilterKeys.UNASSIGNED
+            ),
+            ShotHistoryBeanFilterOption(
+                key = ShotHistoryBeanFilterKeys.bean("delta espresso bar"),
+                label = "Delta Espresso Bar",
+                isSelected = selectedKey == ShotHistoryBeanFilterKeys.bean("delta espresso bar")
+            ),
+            ShotHistoryBeanFilterOption(
+                key = ShotHistoryBeanFilterKeys.bean("hannoversche kaffeemanufaktur"),
+                label = "Hannoversche Kaffeemanufaktur",
+                isSelected = selectedKey == ShotHistoryBeanFilterKeys.bean("hannoversche kaffeemanufaktur")
+            )
+        )
 
     private fun selectShotWithMetadataEditor(
         detail: ShotHistoryDetail,

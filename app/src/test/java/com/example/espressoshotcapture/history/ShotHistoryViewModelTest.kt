@@ -77,10 +77,71 @@ class ShotHistoryViewModelTest {
                         createdAtEpochMillis = 1_000L,
                         qualityLabel = "Data status: Missing target"
                     )
+                ),
+                beanFilterOptions = listOf(
+                    ShotHistoryBeanFilterOption(
+                        key = ShotHistoryBeanFilterKeys.ALL,
+                        label = "All shots",
+                        isSelected = true
+                    ),
+                    ShotHistoryBeanFilterOption(
+                        key = ShotHistoryBeanFilterKeys.UNASSIGNED,
+                        label = "Unassigned",
+                        isSelected = false
+                    )
                 )
             ),
             uiState
         )
+    }
+
+    @Test
+    fun selectingBeanFilterShowsOnlyMatchingShots() = runTest(testDispatcher) {
+        dao.insertShot(shotEntity(id = "shot-delta", createdAtEpochMillis = 2_000L, beanName = "Delta"))
+        dao.insertShot(shotEntity(id = "shot-hannover", createdAtEpochMillis = 1_000L, beanName = "Hannover"))
+
+        viewModel.selectBeanFilter(ShotHistoryBeanFilterKeys.bean("delta"))
+
+        val uiState = viewModel.uiState
+            .first { state ->
+                state.beanFilterOptions.any { option ->
+                    option.key == ShotHistoryBeanFilterKeys.bean("delta") && option.isSelected
+                }
+            }
+
+        assertEquals(listOf("shot-delta"), uiState.items.map { item -> item.id })
+    }
+
+    @Test
+    fun selectingAllRestoresFullHistory() = runTest(testDispatcher) {
+        dao.insertShot(shotEntity(id = "shot-delta", createdAtEpochMillis = 2_000L, beanName = "Delta"))
+        dao.insertShot(shotEntity(id = "shot-hannover", createdAtEpochMillis = 1_000L, beanName = "Hannover"))
+
+        viewModel.selectBeanFilter(ShotHistoryBeanFilterKeys.bean("delta"))
+        viewModel.uiState.first { state -> state.items.map { item -> item.id } == listOf("shot-delta") }
+        viewModel.selectBeanFilter(ShotHistoryBeanFilterKeys.ALL)
+
+        val uiState = viewModel.uiState
+            .first { state ->
+                state.items.map { item -> item.id } == listOf("shot-delta", "shot-hannover")
+            }
+
+        assertEquals(ShotHistoryBeanFilterKeys.ALL, uiState.beanFilterOptions.first { it.isSelected }.key)
+    }
+
+    @Test
+    fun selectingBeanFilterClearsSelectedShotDetail() = runTest(testDispatcher) {
+        dao.insertShot(shotEntity(id = "shot-delta", createdAtEpochMillis = 2_000L, beanName = "Delta"))
+        dao.insertShot(shotEntity(id = "shot-hannover", createdAtEpochMillis = 1_000L, beanName = "Hannover"))
+        viewModel.selectShot("shot-hannover")
+        viewModel.uiState.first { state -> state.selectedShotDetail?.id == "shot-hannover" }
+
+        viewModel.selectBeanFilter(ShotHistoryBeanFilterKeys.bean("delta"))
+
+        val uiState = viewModel.uiState
+            .first { state -> state.items.map { item -> item.id } == listOf("shot-delta") }
+        assertEquals(null, uiState.selectedShotDetail)
+        assertEquals(null, uiState.metadataEditor)
     }
 
     @Test

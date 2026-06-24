@@ -3,6 +3,7 @@ package com.example.espressoshotcapture.history
 import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -67,6 +68,7 @@ fun ShotHistoryRoute(
     ShotHistoryScreen(
         uiState = uiState,
         onShotSelected = viewModel::selectShot,
+        onBeanFilterSelected = viewModel::selectBeanFilter,
         onMetadataRatingChange = viewModel::updateMetadataRating,
         onMetadataTasteDirectionChange = viewModel::updateMetadataTasteDirection,
         onMetadataGrindSettingChange = viewModel::updateMetadataGrindSetting,
@@ -82,6 +84,7 @@ fun ShotHistoryRoute(
 fun ShotHistoryScreen(
     uiState: ShotHistoryUiState,
     onShotSelected: (String) -> Unit = {},
+    onBeanFilterSelected: (String) -> Unit = {},
     onMetadataRatingChange: (String) -> Unit = {},
     onMetadataTasteDirectionChange: (TasteDirection?) -> Unit = {},
     onMetadataGrindSettingChange: (String) -> Unit = {},
@@ -93,9 +96,11 @@ fun ShotHistoryScreen(
 ) {
     ShotHistoryScreen(
         items = uiState.items,
+        beanFilterOptions = uiState.beanFilterOptions,
         selectedShotDetail = uiState.selectedShotDetail,
         metadataEditor = uiState.metadataEditor,
         onShotSelected = onShotSelected,
+        onBeanFilterSelected = onBeanFilterSelected,
         onMetadataRatingChange = onMetadataRatingChange,
         onMetadataTasteDirectionChange = onMetadataTasteDirectionChange,
         onMetadataGrindSettingChange = onMetadataGrindSettingChange,
@@ -110,11 +115,19 @@ fun ShotHistoryScreen(
 @Composable
 fun ShotHistoryScreen(
     items: List<ShotHistoryItem>,
+    beanFilterOptions: List<ShotHistoryBeanFilterOption> = listOf(
+        ShotHistoryBeanFilterOption(
+            key = ShotHistoryBeanFilterKeys.ALL,
+            label = "All shots",
+            isSelected = true
+        )
+    ),
     selectedShotDetail: ShotHistoryDetail? = null,
     metadataEditor: ShotUserMetadataEditorState? = selectedShotDetail?.let { detail ->
         ShotUserMetadataEditorState(shotId = detail.id)
     },
     onShotSelected: (String) -> Unit = {},
+    onBeanFilterSelected: (String) -> Unit = {},
     onMetadataRatingChange: (String) -> Unit = {},
     onMetadataTasteDirectionChange: (TasteDirection?) -> Unit = {},
     onMetadataGrindSettingChange: (String) -> Unit = {},
@@ -126,6 +139,10 @@ fun ShotHistoryScreen(
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         SectionContainer(title = "Recent Shot History") {
+            BeanFilterBar(
+                options = beanFilterOptions,
+                onBeanFilterSelected = onBeanFilterSelected
+            )
             if (items.isEmpty()) {
                 BasicText(
                     text = "No saved shots",
@@ -161,6 +178,63 @@ fun ShotHistoryScreen(
             onMetadataClear = onMetadataClear
         )
     }
+}
+
+@Composable
+private fun BeanFilterBar(
+    options: List<ShotHistoryBeanFilterOption>,
+    onBeanFilterSelected: (String) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag(ShotHistoryScreenTestTags.BEAN_FILTER_SECTION)
+    ) {
+        BasicText(
+            text = "Bean",
+            style = historySectionLabelStyle()
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            options.forEach { option ->
+                BeanFilterChip(
+                    option = option,
+                    onClick = { onBeanFilterSelected(option.key) },
+                    modifier = Modifier
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun BeanFilterChip(
+    option: ShotHistoryBeanFilterOption,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    BasicText(
+        text = option.label,
+        modifier = modifier
+            .testTag(ShotHistoryScreenTestTags.beanFilterOption(option.key))
+            .clickable(onClick = onClick)
+            .background(
+                color = if (option.isSelected) Color(0xFF244033) else Color(0xFF0F1114),
+                shape = RoundedCornerShape(6.dp)
+            )
+            .border(
+                width = 1.dp,
+                color = if (option.isSelected) Color(0xFF5DCB8A) else Color(0xFF3A414A),
+                shape = RoundedCornerShape(6.dp)
+            )
+            .padding(horizontal = 8.dp, vertical = 7.dp),
+        style = historyBodyStyle()
+    )
 }
 
 @Composable
@@ -627,6 +701,7 @@ private fun historyMonoStyle(): TextStyle =
     )
 
 object ShotHistoryScreenTestTags {
+    const val BEAN_FILTER_SECTION = "ShotHistoryBeanFilter"
     const val HISTORY_LIST = "ShotHistoryList"
     const val SELECTED_DETAIL = "SelectedShotDetail"
     const val DETAIL_REPORT = "ShotDetailReport"
@@ -648,6 +723,7 @@ object ShotHistoryScreenTestTags {
     const val METADATA_CLEAR_ACTION = "ShotFeedbackClear"
     const val METADATA_VALIDATION_MESSAGE = "ShotFeedbackValidationMessage"
 
+    fun beanFilterOption(key: String): String = "ShotHistoryBeanFilter_$key"
     fun historyRow(id: String): String = "ShotHistoryRow_$id"
     fun historyRowTitle(id: String): String = "ShotHistoryRowTitle_$id"
     fun historyRowMetadata(id: String): String = "ShotHistoryRowMetadata_$id"
