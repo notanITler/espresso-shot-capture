@@ -107,6 +107,64 @@ class ShotHistoryStateMapperTest {
     }
 
     @Test
+    fun allFilterKeepsMoreThanThreeShotsInNewestFirstInputOrder() {
+        val entities = (6 downTo 1).map { index ->
+            shotEntity(id = "shot-$index", createdAtEpochMillis = index * 1_000L)
+        }
+
+        val uiState = ShotHistoryStateMapper.fromEntities(entities)
+
+        assertEquals(
+            listOf("shot-6", "shot-5", "shot-4", "shot-3", "shot-2", "shot-1"),
+            uiState.items.map { item -> item.id }
+        )
+    }
+
+    @Test
+    fun beanFilterKeepsMoreThanThreeMatchingShotsInNewestFirstInputOrder() {
+        val entities = listOf(
+            shotEntity(id = "shot-delta-5", createdAtEpochMillis = 5_000L, beanName = "Delta"),
+            shotEntity(id = "shot-other", createdAtEpochMillis = 4_500L, beanName = "Other"),
+            shotEntity(id = "shot-delta-4", createdAtEpochMillis = 4_000L, beanName = "Delta"),
+            shotEntity(id = "shot-delta-3", createdAtEpochMillis = 3_000L, beanName = "Delta"),
+            shotEntity(id = "shot-delta-2", createdAtEpochMillis = 2_000L, beanName = "Delta"),
+            shotEntity(id = "shot-delta-1", createdAtEpochMillis = 1_000L, beanName = "Delta")
+        )
+
+        val uiState = ShotHistoryStateMapper.fromEntities(
+            entities = entities,
+            selectedBeanFilterKey = ShotHistoryBeanFilterKeys.bean("delta")
+        )
+
+        assertEquals(
+            listOf("shot-delta-5", "shot-delta-4", "shot-delta-3", "shot-delta-2", "shot-delta-1"),
+            uiState.items.map { item -> item.id }
+        )
+    }
+
+    @Test
+    fun unassignedFilterKeepsMoreThanThreeMatchingShotsInNewestFirstInputOrder() {
+        val entities = listOf(
+            shotEntity(id = "shot-empty-5", createdAtEpochMillis = 5_000L),
+            shotEntity(id = "shot-delta", createdAtEpochMillis = 4_500L, beanName = "Delta"),
+            shotEntity(id = "shot-empty-4", createdAtEpochMillis = 4_000L),
+            shotEntity(id = "shot-empty-3", createdAtEpochMillis = 3_000L, beanName = "  "),
+            shotEntity(id = "shot-empty-2", createdAtEpochMillis = 2_000L),
+            shotEntity(id = "shot-empty-1", createdAtEpochMillis = 1_000L)
+        )
+
+        val uiState = ShotHistoryStateMapper.fromEntities(
+            entities = entities,
+            selectedBeanFilterKey = ShotHistoryBeanFilterKeys.UNASSIGNED
+        )
+
+        assertEquals(
+            listOf("shot-empty-5", "shot-empty-4", "shot-empty-3", "shot-empty-2", "shot-empty-1"),
+            uiState.items.map { item -> item.id }
+        )
+    }
+
+    @Test
     fun caseAndWhitespaceBeanNamesShareOneFilterOption() {
         val entities = listOf(
             shotEntity(id = "shot-1", createdAtEpochMillis = 1_000L, beanName = "Delta"),

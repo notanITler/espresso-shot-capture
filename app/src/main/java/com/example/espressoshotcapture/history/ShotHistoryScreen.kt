@@ -13,8 +13,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
@@ -40,7 +38,7 @@ import com.example.espressoshotcapture.EspressoShotCaptureApplication
 import com.example.espressoshotcapture.capture.domain.TasteDirection
 import com.example.espressoshotcapture.ui.SectionContainer
 
-private const val MAX_VISIBLE_HISTORY_ROWS = 3
+private const val HISTORY_PREVIEW_ROW_COUNT = 3
 
 @Composable
 fun ShotHistoryRoute(
@@ -137,11 +135,21 @@ fun ShotHistoryScreen(
     onMetadataClear: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    var isHistoryExpanded by remember { mutableStateOf(false) }
+    val visibleItems = if (isHistoryExpanded) {
+        items
+    } else {
+        items.take(HISTORY_PREVIEW_ROW_COUNT)
+    }
+
     Column(modifier = modifier.fillMaxWidth()) {
         SectionContainer(title = "Recent Shot History") {
             BeanFilterBar(
                 options = beanFilterOptions,
-                onBeanFilterSelected = onBeanFilterSelected
+                onBeanFilterSelected = { key ->
+                    isHistoryExpanded = false
+                    onBeanFilterSelected(key)
+                }
             )
             if (items.isEmpty()) {
                 BasicText(
@@ -150,19 +158,29 @@ fun ShotHistoryScreen(
                     style = historyMutedStyle()
                 )
             } else {
-                val visibleItems = items.take(MAX_VISIBLE_HISTORY_ROWS)
-                LazyColumn(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(max = 180.dp)
                         .testTag(ShotHistoryScreenTestTags.HISTORY_LIST)
                 ) {
-                    items(items = visibleItems, key = { item -> item.id }) { item ->
+                    visibleItems.forEach { item ->
                         ShotHistoryRow(
                             item = item,
                             onClick = { onShotSelected(item.id) }
                         )
                     }
+                }
+                if (items.size > HISTORY_PREVIEW_ROW_COUNT) {
+                    BasicText(
+                        text = if (isHistoryExpanded) "Show fewer" else "View all history",
+                        modifier = Modifier
+                            .padding(top = 8.dp)
+                            .testTag(ShotHistoryScreenTestTags.HISTORY_EXPAND_ACTION)
+                            .clickable {
+                                isHistoryExpanded = !isHistoryExpanded
+                            },
+                        style = historyActionStyle()
+                    )
                 }
             }
         }
@@ -703,6 +721,7 @@ private fun historyMonoStyle(): TextStyle =
 object ShotHistoryScreenTestTags {
     const val BEAN_FILTER_SECTION = "ShotHistoryBeanFilter"
     const val HISTORY_LIST = "ShotHistoryList"
+    const val HISTORY_EXPAND_ACTION = "ShotHistoryExpandAction"
     const val SELECTED_DETAIL = "SelectedShotDetail"
     const val DETAIL_REPORT = "ShotDetailReport"
     const val DETAIL_MAIN_SUMMARY = "ShotDetailMainSummary"
