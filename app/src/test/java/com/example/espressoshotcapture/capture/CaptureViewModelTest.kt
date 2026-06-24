@@ -878,4 +878,26 @@ private class FakeShotDao : ShotDao {
         shots.removeAll { shot -> shot.id == id }
         shotsFlow.value = shots.toList()
     }
+
+    override fun updateShotUserMetadata(
+        id: String,
+        rating: Int?,
+        tasteDirection: String?,
+        grindSetting: String?,
+        beanName: String?,
+        notes: String?
+    ): Int {
+        val index = shots.indexOfFirst { shot -> shot.id == id }
+        if (index == -1) return 0
+
+        shots[index] = shots[index].copy(
+            rating = rating,
+            tasteDirection = tasteDirection,
+            grindSetting = grindSetting,
+            beanName = beanName,
+            notes = notes
+        )
+        shotsFlow.value = shots.toList()
+        return 1
+    }
 }

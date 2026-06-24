@@ -24,4 +24,24 @@ interface ShotDao {
 
     @Query("DELETE FROM shots WHERE id = :id")
     fun deleteShotById(id: String)
+
+    @Query(
+        """
+        UPDATE shots
+        SET rating = :rating,
+            tasteDirection = :tasteDirection,
+            grindSetting = :grindSetting,
+            beanName = :beanName,
+            notes = :notes
+        WHERE id = :id
+        """
+    )
+    fun updateShotUserMetadata(
+        id: String,
+        rating: Int?,
+        tasteDirection: String?,
+        grindSetting: String?,
+        beanName: String?,
+        notes: String?
+    ): Int
 }

@@ -28,4 +28,20 @@ class ShotRepository(
         }
         saveShot(ShotEntityMapper.fromShotDraft(shotDraft, userMetadata))
     }
+
+    fun updateShotUserMetadata(shotId: String, metadata: ShotUserMetadata): Boolean {
+        require(metadata.isValid()) {
+            "Shot metadata is invalid"
+        }
+
+        val updatedRows = shotDao.updateShotUserMetadata(
+            id = shotId,
+            rating = metadata.rating,
+            tasteDirection = metadata.tasteDirection?.name,
+            grindSetting = metadata.grindSetting,
+            beanName = metadata.beanName,
+            notes = metadata.notes
+        )
+        return updatedRows > 0
+    }
 }

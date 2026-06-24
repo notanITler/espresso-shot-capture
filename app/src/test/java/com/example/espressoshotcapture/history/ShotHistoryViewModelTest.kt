@@ -141,6 +141,28 @@ private class FakeShotDao : ShotDao {
         shotsFlow.value = orderedShots()
     }
 
+    override fun updateShotUserMetadata(
+        id: String,
+        rating: Int?,
+        tasteDirection: String?,
+        grindSetting: String?,
+        beanName: String?,
+        notes: String?
+    ): Int {
+        val index = shots.indexOfFirst { shot -> shot.id == id }
+        if (index == -1) return 0
+
+        shots[index] = shots[index].copy(
+            rating = rating,
+            tasteDirection = tasteDirection,
+            grindSetting = grindSetting,
+            beanName = beanName,
+            notes = notes
+        )
+        shotsFlow.value = orderedShots()
+        return 1
+    }
+
     private fun orderedShots(): List<ShotEntity> =
         shots.sortedByDescending { shot -> shot.createdAtEpochMillis }
 }

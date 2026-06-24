@@ -22,8 +22,10 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -139,6 +141,120 @@ class ShotRepositoryTest {
             )
         }
         assertNull(dao.getShotById("shot-invalid"))
+    }
+
+    @Test
+    fun updateShotUserMetadataWritesFullMetadata() = runTest {
+        repository.saveShotDraft(sampleDraft(id = "shot-update", createdAtEpochMs = 1_234L))
+        val metadata = ShotUserMetadata(
+            rating = 5,
+            tasteDirection = TasteDirection.BALANCED,
+            grindSetting = "8.10",
+            beanName = "Ethiopia Guji",
+            notes = "Sweet and clean"
+        )
+
+        val updated = repository.updateShotUserMetadata("shot-update", metadata)
+
+        val entity = requireNotNull(dao.getShotById("shot-update"))
+        assertTrue(updated)
+        assertEquals(metadata, ShotEntityMapper.toUserMetadata(entity))
+        assertEquals("8.10", entity.grindSetting)
+    }
+
+    @Test
+    fun updateShotUserMetadataCanClearOptionalFields() = runTest {
+        val fullMetadata = ShotUserMetadata(
+            rating = 4,
+            tasteDirection = TasteDirection.BITTER,
+            grindSetting = "9.0",
+            beanName = "Brazil Natural",
+            notes = "Dry finish"
+        )
+        val partialMetadata = ShotUserMetadata(
+            rating = 3,
+            tasteDirection = null,
+            grindSetting = null,
+            beanName = "Brazil Natural",
+            notes = null
+        )
+        repository.saveShotDraft(
+            shotDraft = sampleDraft(id = "shot-clear", createdAtEpochMs = 1_234L),
+            userMetadata = fullMetadata
+        )
+
+        val updated = repository.updateShotUserMetadata("shot-clear", partialMetadata)
+
+        val entity = requireNotNull(dao.getShotById("shot-clear"))
+        assertTrue(updated)
+        assertEquals(partialMetadata, ShotEntityMapper.toUserMetadata(entity))
+        assertNull(entity.tasteDirection)
+        assertNull(entity.grindSetting)
+        assertNull(entity.notes)
+    }
+
+    @Test
+    fun updateShotUserMetadataRejectsInvalidMetadataAndPreservesStoredData() = runTest {
+        val originalMetadata = ShotUserMetadata(
+            rating = 4,
+            tasteDirection = TasteDirection.SOUR,
+            grindSetting = "8.10",
+            beanName = "Kenya AA",
+            notes = "Bright"
+        )
+        repository.saveShotDraft(
+            shotDraft = sampleDraft(id = "shot-invalid-update", createdAtEpochMs = 1_234L),
+            userMetadata = originalMetadata
+        )
+
+        assertThrows(IllegalArgumentException::class.java) {
+            repository.updateShotUserMetadata(
+                shotId = "shot-invalid-update",
+                metadata = ShotUserMetadata(rating = 0)
+            )
+        }
+
+        val entity = requireNotNull(dao.getShotById("shot-invalid-update"))
+        assertEquals(originalMetadata, ShotEntityMapper.toUserMetadata(entity))
+    }
+
+    @Test
+    fun updateShotUserMetadataDoesNotChangeRawJson() = runTest {
+        val draft = sampleDraft(id = "shot-json", createdAtEpochMs = 1_234L)
+        repository.saveShotDraft(draft)
+        val before = requireNotNull(dao.getShotById("shot-json"))
+
+        repository.updateShotUserMetadata(
+            shotId = "shot-json",
+            metadata = ShotUserMetadata(rating = 5, grindSetting = "8.10")
+        )
+
+        val after = requireNotNull(dao.getShotById("shot-json"))
+        assertEquals(before.json, after.json)
+    }
+
+    @Test
+    fun updateShotUserMetadataDoesNotChangeCreatedAtEpochMillis() = runTest {
+        repository.saveShotDraft(sampleDraft(id = "shot-created", createdAtEpochMs = 9_876L))
+        val before = requireNotNull(dao.getShotById("shot-created"))
+
+        repository.updateShotUserMetadata(
+            shotId = "shot-created",
+            metadata = ShotUserMetadata(rating = 2, notes = "Needs work")
+        )
+
+        val after = requireNotNull(dao.getShotById("shot-created"))
+        assertEquals(before.createdAtEpochMillis, after.createdAtEpochMillis)
+    }
+
+    @Test
+    fun updateShotUserMetadataReturnsFalseForMissingShotId() = runTest {
+        val updated = repository.updateShotUserMetadata(
+            shotId = "missing-shot",
+            metadata = ShotUserMetadata(rating = 5)
+        )
+
+        assertFalse(updated)
     }
 
     private fun shotEntity(
