@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
@@ -30,6 +31,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -297,42 +299,99 @@ private fun ShotHistoryRow(
     item: ShotHistoryItem,
     onClick: () -> Unit
 ) {
-    Column(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
             .testTag(ShotHistoryScreenTestTags.historyRow(item.id))
             .clickable(onClick = onClick)
-            .padding(vertical = 4.dp)
+            .padding(vertical = 3.dp)
             .background(
-                color = Color(0xFF20242A),
-                shape = RoundedCornerShape(6.dp)
+                color = Color(0xFF151A20),
+                shape = RoundedCornerShape(8.dp)
             )
             .border(
                 width = 1.dp,
-                color = Color(0xFF30363D),
-                shape = RoundedCornerShape(6.dp)
+                color = Color(0xFF28303A),
+                shape = RoundedCornerShape(8.dp)
             )
             .padding(horizontal = 10.dp, vertical = 8.dp)
     ) {
-        BasicText(
-            text = item.comparisonTitleLabel,
-            modifier = Modifier.testTag(ShotHistoryScreenTestTags.historyRowTitle(item.id)),
-            style = historyStrongStyle()
+        Box(
+            modifier = Modifier
+                .width(3.dp)
+                .height(44.dp)
+                .background(
+                    color = if (item.comparisonTitleLabel == "Unassigned bean") {
+                        Color(0xFFF2C94C)
+                    } else {
+                        Color(0xFF5DCB8A)
+                    },
+                    shape = RoundedCornerShape(8.dp)
+                )
         )
-        if (item.comparisonMetadataLabel != null) {
+        Spacer(modifier = Modifier.width(10.dp))
+        Column(modifier = Modifier.weight(1f)) {
             BasicText(
-                text = item.comparisonMetadataLabel,
-                modifier = Modifier.testTag(ShotHistoryScreenTestTags.historyRowMetadata(item.id)),
-                style = historyBodyStyle()
+                text = item.comparisonTitleLabel,
+                modifier = Modifier.testTag(ShotHistoryScreenTestTags.historyRowTitle(item.id)),
+                style = historyStrongStyle(),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            if (item.comparisonMetadataLabel != null) {
+                BasicText(
+                    text = item.comparisonMetadataLabel,
+                    modifier = Modifier.testTag(ShotHistoryScreenTestTags.historyRowMetadata(item.id)),
+                    style = historyBodyStyle(),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            Spacer(modifier = Modifier.height(3.dp))
+            BasicText(
+                text = item.comparisonMetricsLabel,
+                modifier = Modifier.testTag(ShotHistoryScreenTestTags.historyRowMetrics(item.id)),
+                style = historyMutedStyle(),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
             )
         }
+    }
+}
+
+@Composable
+private fun DetailMetricCard(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .background(
+                color = Color(0xFF151A20),
+                shape = RoundedCornerShape(8.dp)
+            )
+            .border(
+                width = 1.dp,
+                color = Color(0xFF28303A),
+                shape = RoundedCornerShape(8.dp)
+            )
+            .padding(10.dp)
+    ) {
+        val displayValue = value.removeLabelPrefix()
         BasicText(
-            text = item.comparisonMetricsLabel,
-            modifier = Modifier.testTag(ShotHistoryScreenTestTags.historyRowMetrics(item.id)),
+            text = label,
             style = historyMutedStyle()
+        )
+        BasicText(
+            text = displayValue,
+            style = historyStrongStyle()
         )
     }
 }
+
+private fun String.removeLabelPrefix(): String =
+    substringAfter(": ", this)
 
 @Composable
 private fun ShotHistoryDetailView(
@@ -359,22 +418,39 @@ private fun ShotHistoryDetailView(
             title = "Main result summary",
             modifier = Modifier.testTag(ShotHistoryScreenTestTags.DETAIL_MAIN_SUMMARY)
         ) {
-            DetailMetricRow(primary = detail.doseLabel, secondary = detail.finalYieldLabel)
-            DetailMetricRow(primary = detail.averageFlowLabel)
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                DetailMetricCard(label = "Dose", value = detail.doseLabel, modifier = Modifier.weight(1f))
+                DetailMetricCard(label = "Yield", value = detail.finalYieldLabel, modifier = Modifier.weight(1f))
+                DetailMetricCard(label = "Average flow", value = detail.averageFlowLabel, modifier = Modifier.weight(1f))
+            }
         }
         DetailGroup(
             title = "Shot timing / target",
             modifier = Modifier.testTag(ShotHistoryScreenTestTags.DETAIL_TIMING_TARGET)
         ) {
-            DetailMetricRow(primary = detail.flowTimeLabel, secondary = detail.targetYieldLabel)
-            DetailMetricRow(primary = detail.ratioLabel, secondary = detail.targetReachedLabel)
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                DetailMetricCard(label = "Flow time", value = detail.flowTimeLabel, modifier = Modifier.weight(1f))
+                DetailMetricCard(label = "Target", value = detail.targetYieldLabel, modifier = Modifier.weight(1f))
+            }
+            Spacer(modifier = Modifier.height(6.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                DetailMetricCard(label = "Ratio", value = detail.ratioLabel, modifier = Modifier.weight(1f))
+                DetailMetricCard(label = "Target reached", value = detail.targetReachedLabel, modifier = Modifier.weight(1f))
+            }
         }
         DetailGroup(
             title = "Data confidence",
             modifier = Modifier.testTag(ShotHistoryScreenTestTags.DETAIL_DATA_CONFIDENCE)
         ) {
-            DetailMetricRow(primary = detail.sourceLabel, secondary = detail.qualityLabel)
-            DetailMetricRow(primary = detail.sampleCountLabel, secondary = detail.createdLabel)
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                DetailMetricCard(label = "Source", value = detail.sourceLabel, modifier = Modifier.weight(1f))
+                DetailMetricCard(label = "Data status", value = detail.qualityLabel, modifier = Modifier.weight(1f))
+            }
+            Spacer(modifier = Modifier.height(6.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                DetailMetricCard(label = "Weight readings", value = detail.sampleCountLabel, modifier = Modifier.weight(1f))
+                DetailMetricCard(label = "Created", value = detail.createdLabel, modifier = Modifier.weight(1f))
+            }
         }
         if (metadataEditor != null) {
             ShotMetadataEditor(

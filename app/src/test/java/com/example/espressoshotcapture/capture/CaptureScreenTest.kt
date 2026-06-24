@@ -301,7 +301,8 @@ class CaptureScreenTest {
             .onNodeWithTag(CaptureScreenTestTags.RECORDING_WEIGHT)
             .performScrollTo()
             .assertIsDisplayed()
-            .assertTextContains("Weight: 0.0 g")
+            .assertTextContains("0.0 g")
+        composeTestRule.onAllNodesWithText("Weight: 0.0 g").assertCountEquals(0)
         composeTestRule
             .onNodeWithTag(CaptureScreenTestTags.RECORDING_PROGRESS)
             .performScrollTo()

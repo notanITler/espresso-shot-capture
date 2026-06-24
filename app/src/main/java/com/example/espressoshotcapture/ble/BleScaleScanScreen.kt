@@ -30,6 +30,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -122,44 +123,37 @@ fun ScaleConnectionHeader(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 8.dp)
-            .background(
-                color = Color(0xFF171A1E),
-                shape = RoundedCornerShape(8.dp)
-            )
-            .border(
-                width = 1.dp,
-                color = state.borderColor,
-                shape = RoundedCornerShape(8.dp)
-            )
-            .padding(12.dp)
+            .padding(horizontal = 14.dp, vertical = 10.dp)
     ) {
         Row(modifier = Modifier.fillMaxWidth()) {
             BasicText(
                 text = "David's Coffee Companion",
                 modifier = Modifier
                     .weight(1f)
+                    .padding(end = 8.dp)
                     .testTag(ScaleConnectionTestTags.HEADER_TITLE),
                 style = TextStyle(
                     color = Color(0xFFF6F7F9),
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
+                    fontSize = 19.sp,
+                    fontWeight = FontWeight.Bold
+                ),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
             BasicText(
                 text = state.buttonLabel,
                 modifier = Modifier
                     .background(
-                        color = state.buttonColor,
-                        shape = RoundedCornerShape(6.dp)
+                        color = if (state.isConnected) Color(0xFF13251D) else state.buttonColor,
+                        shape = RoundedCornerShape(10.dp)
                     )
                     .border(
                         width = 1.dp,
                         color = state.borderColor,
-                        shape = RoundedCornerShape(6.dp)
+                        shape = RoundedCornerShape(10.dp)
                     )
                     .clickable { isPanelVisible = !isPanelVisible }
-                    .padding(horizontal = 10.dp, vertical = 8.dp)
+                    .padding(horizontal = 11.dp, vertical = 8.dp)
                     .testTag(ScaleConnectionTestTags.BLUETOOTH_BUTTON),
                 style = TextStyle(
                     color = state.buttonTextColor,
@@ -199,8 +193,13 @@ private fun ScaleConnectionPanel(
         modifier = modifier
             .fillMaxWidth()
             .background(
-                color = Color(0xFF20242A),
-                shape = RoundedCornerShape(8.dp)
+                color = Color(0xFF11151A),
+                shape = RoundedCornerShape(12.dp)
+            )
+            .border(
+                width = 1.dp,
+                color = Color(0xFF2E3540),
+                shape = RoundedCornerShape(12.dp)
             )
             .padding(12.dp)
     ) {
@@ -483,7 +482,8 @@ private data class BluetoothHeaderState(
     val buttonLabel: String,
     val buttonColor: Color,
     val buttonTextColor: Color,
-    val borderColor: Color
+    val borderColor: Color,
+    val isConnected: Boolean = false
 )
 
 private fun bluetoothHeaderState(
@@ -510,14 +510,16 @@ private fun bluetoothHeaderState(
                 buttonLabel = bluetoothHeaderButtonLabel(uiState, gattState),
                 buttonColor = Color(0xFF263D37),
                 buttonTextColor = Color(0xFFD8FFE8),
-                borderColor = Color(0xFF68D391)
+                borderColor = Color(0xFF68D391),
+                isConnected = true
             )
         gattState.connectionState == DecentScaleGattConnectionState.Connected ->
             BluetoothHeaderState(
                 buttonLabel = bluetoothHeaderButtonLabel(uiState, gattState),
                 buttonColor = Color(0xFF263D37),
                 buttonTextColor = Color(0xFFD8FFE8),
-                borderColor = Color(0xFF68D391)
+                borderColor = Color(0xFF68D391),
+                isConnected = true
             )
         uiState.status == BleScaleScanStatus.SCANNING ->
             BluetoothHeaderState(

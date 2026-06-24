@@ -52,13 +52,13 @@ fun CaptureScreen(
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 8.dp)
             .background(
-                color = Color(0xFF171A1E),
-                shape = RoundedCornerShape(8.dp)
+                color = Color(0xFF11151A),
+                shape = RoundedCornerShape(14.dp)
             )
             .border(
                 width = 1.dp,
-                color = Color(0xFF30363D),
-                shape = RoundedCornerShape(8.dp)
+                color = Color(0xFF2E3540),
+                shape = RoundedCornerShape(14.dp)
             )
             .padding(12.dp)
     ) {
@@ -121,13 +121,10 @@ fun CaptureScreen(
         }
         Spacer(modifier = Modifier.height(10.dp))
 
-        BasicText(
-            text = "Live shot values",
-            style = captureSectionLabelStyle()
-        )
+        BasicText(text = "LIVE WEIGHT", style = captureSectionLabelStyle())
         Spacer(modifier = Modifier.height(4.dp))
         LargeMetric(
-            text = uiState.currentWeightLabel ?: "Weight: 0.0 g",
+            text = (uiState.currentWeightLabel ?: "Weight: 0.0 g").asLiveWeightValue(),
             modifier = Modifier.testTag(CaptureScreenTestTags.RECORDING_WEIGHT)
         )
         Spacer(modifier = Modifier.height(4.dp))
@@ -136,6 +133,17 @@ fun CaptureScreen(
             modifier = Modifier.testTag(CaptureScreenTestTags.RECORDING_PROGRESS),
             style = captureBodyStyle()
         )
+        Spacer(modifier = Modifier.height(3.dp))
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(7.dp)
+                .background(
+                    color = Color(0xFF303844),
+                    shape = RoundedCornerShape(12.dp)
+                )
+        )
+        Spacer(modifier = Modifier.height(4.dp))
         BasicText(
             text = uiState.targetReachedLabel,
             modifier = Modifier.testTag(CaptureScreenTestTags.TARGET_REACHED),
@@ -162,19 +170,37 @@ fun CaptureScreen(
         Spacer(modifier = Modifier.height(10.dp))
 
         BasicText(
-            text = "Shot state",
+            text = "SHOT STATE",
             style = captureSectionLabelStyle()
         )
         Spacer(modifier = Modifier.height(2.dp))
-        BasicText(
-            text = uiState.shotStatusLabel,
-            modifier = Modifier.testTag(CaptureScreenTestTags.STATUS),
-            style = TextStyle(
-                color = Color(0xFFF6F7F9),
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            BasicText(
+                text = "●",
+                style = TextStyle(
+                    color = if (uiState.status == CaptureStatus.READY) {
+                        Color(0xFF68D391)
+                    } else {
+                        Color(0xFFF6F7F9)
+                    },
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
             )
-        )
+            BasicText(
+                text = uiState.shotStatusLabel,
+                modifier = Modifier.testTag(CaptureScreenTestTags.STATUS),
+                style = TextStyle(
+                    color = if (uiState.status == CaptureStatus.READY) {
+                        Color(0xFF68D391)
+                    } else {
+                        Color(0xFFF6F7F9)
+                    },
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            )
+        }
         Spacer(modifier = Modifier.height(8.dp))
 
         StableActionArea(
@@ -198,21 +224,21 @@ private fun SourcePill(
         modifier = modifier
             .semantics(mergeDescendants = true) {}
             .background(
-                color = if (selected) Color(0xFF263D37) else Color(0xFF20242A),
-                shape = RoundedCornerShape(6.dp)
+                color = if (selected) Color(0xFF14291F) else Color(0xFF171A20),
+                shape = RoundedCornerShape(10.dp)
             )
             .border(
                 width = 1.dp,
-                color = if (selected) Color(0xFF68D391) else Color(0xFF3A414A),
-                shape = RoundedCornerShape(6.dp)
+                color = if (selected) Color(0xFF5DCB8A) else Color(0xFF343B46),
+                shape = RoundedCornerShape(10.dp)
             )
-            .padding(horizontal = 8.dp, vertical = 6.dp)
+            .padding(horizontal = 10.dp, vertical = 10.dp)
     ) {
         BasicText(
             text = text,
             style = TextStyle(
                 color = if (selected) Color(0xFFD8FFE8) else Color(0xFFD0D6DD),
-                fontSize = 13.sp,
+                fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold
             )
         )
@@ -246,15 +272,15 @@ private fun TargetInput(
                 .testTag(testTag)
                 .fillMaxWidth()
                 .background(
-                    color = Color(0xFF0F1114),
-                    shape = RoundedCornerShape(6.dp)
+                    color = Color(0xFF171A20),
+                    shape = RoundedCornerShape(8.dp)
                 )
                 .border(
                     width = 1.dp,
-                    color = Color(0xFF3A414A),
-                    shape = RoundedCornerShape(6.dp)
+                    color = Color(0xFF343B46),
+                    shape = RoundedCornerShape(8.dp)
                 )
-                .padding(horizontal = 8.dp, vertical = 6.dp)
+                .padding(horizontal = 9.dp, vertical = 8.dp)
         )
     }
 }
@@ -275,19 +301,19 @@ private fun RatioMetric(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(
-                    color = Color(0xFF20242A),
-                    shape = RoundedCornerShape(6.dp)
+                    color = Color(0xFF171A20),
+                    shape = RoundedCornerShape(8.dp)
                 )
                 .border(
                     width = 1.dp,
-                    color = Color(0xFF3A414A),
-                    shape = RoundedCornerShape(6.dp)
+                    color = Color(0xFF343B46),
+                    shape = RoundedCornerShape(8.dp)
                 )
-                .padding(horizontal = 8.dp, vertical = 6.dp),
+                .padding(horizontal = 9.dp, vertical = 8.dp),
             style = TextStyle(
                 color = Color(0xFFE6EBF0),
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold
+            fontSize = 18.sp,
+            fontWeight = FontWeight.SemiBold
             )
         )
     }
@@ -303,7 +329,7 @@ private fun LargeMetric(
         modifier = modifier,
         style = TextStyle(
             color = Color(0xFFFFFFFF),
-            fontSize = 30.sp,
+            fontSize = 54.sp,
             fontWeight = FontWeight.Bold
         )
     )
@@ -318,10 +344,15 @@ private fun SupportingMetric(
         text = text,
         modifier = modifier
             .background(
-                color = Color(0xFF20242A),
-                shape = RoundedCornerShape(6.dp)
+                color = Color(0xFF171A20),
+                shape = RoundedCornerShape(8.dp)
             )
-            .padding(8.dp),
+            .border(
+                width = 1.dp,
+                color = Color(0xFF303844),
+                shape = RoundedCornerShape(8.dp)
+            )
+            .padding(10.dp),
         style = TextStyle(
             color = Color(0xFFE6EBF0),
             fontSize = 13.sp,
@@ -341,14 +372,14 @@ private fun ActionPill(
         modifier = modifier
             .background(
                 color = if (enabled) Color(0xFFF2C94C) else Color(0xFF24282E),
-                shape = RoundedCornerShape(6.dp)
+                shape = RoundedCornerShape(9.dp)
             )
             .border(
                 width = 1.dp,
                 color = if (enabled) Color(0xFFF7D66F) else Color(0xFF3A414A),
-                shape = RoundedCornerShape(6.dp)
+                shape = RoundedCornerShape(9.dp)
             )
-            .padding(horizontal = 10.dp, vertical = 10.dp),
+            .padding(horizontal = 12.dp, vertical = 12.dp),
         style = TextStyle(
             color = if (enabled) Color(0xFF181A1D) else Color(0xFF6F7782),
             fontSize = 16.sp,
@@ -461,6 +492,9 @@ private fun CaptureUiState.fakeScaleSourceLabel(): String =
 
 private fun CaptureUiState.decentScaleSourceLabel(): String =
     "Decent Scale"
+
+private fun String.asLiveWeightValue(): String =
+    removePrefix("Weight:").trim()
 
 @Preview
 @Composable
