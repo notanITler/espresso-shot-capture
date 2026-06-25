@@ -23,9 +23,21 @@ object ShotHistoryStateMapper {
             items = ShotHistoryMapper.fromEntities(filteredEntities),
             selectedShotDetail = selectedEntity?.toDetail(),
             metadataEditor = selectedEntity?.toMetadataEditor(),
+            beanSuggestions = beanSuggestions(entities),
             beanFilterOptions = filterOptions
         )
     }
+
+    private fun beanSuggestions(entities: List<ShotEntity>): List<String> =
+        entities
+            .mapNotNull { entity ->
+                entity.normalizedBeanName()?.let { key -> key to entity.beanName.orEmpty().trim() }
+            }
+            .groupBy(keySelector = { pair -> pair.first }, valueTransform = { pair -> pair.second })
+            .mapValues { (_, displayNames) -> displayNames.first() }
+            .toSortedMap()
+            .values
+            .toList()
 
     private fun beanFilterOptions(
         entities: List<ShotEntity>,

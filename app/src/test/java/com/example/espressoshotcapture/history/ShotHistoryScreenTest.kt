@@ -17,6 +17,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import com.example.espressoshotcapture.capture.domain.TasteDirection
 import com.example.espressoshotcapture.MainActivity
@@ -390,7 +391,7 @@ class ShotHistoryScreenTest {
             .performScrollTo()
             .assertIsDisplayed()
         composeTestRule
-            .onNodeWithTag(ShotHistoryScreenTestTags.METADATA_RATING_INPUT)
+            .onNodeWithTag(ShotHistoryScreenTestTags.METADATA_RATING_STARS)
             .performScrollTo()
             .assertIsDisplayed()
         composeTestRule
@@ -427,7 +428,7 @@ class ShotHistoryScreenTest {
         )
 
         composeTestRule
-            .onNodeWithTag(ShotHistoryScreenTestTags.METADATA_RATING_INPUT)
+            .onNodeWithTag(ShotHistoryScreenTestTags.METADATA_RATING_STARS)
             .performScrollTo()
             .assertIsDisplayed()
         composeTestRule
@@ -459,13 +460,13 @@ class ShotHistoryScreenTest {
         )
 
         composeTestRule
-            .onNodeWithTag(ShotHistoryScreenTestTags.METADATA_RATING_INPUT)
+            .onNodeWithTag(ShotHistoryScreenTestTags.metadataRatingStar(4))
             .performScrollTo()
-            .assertTextEquals("4")
+            .assertTextEquals("★")
         composeTestRule
-            .onNodeWithTag(ShotHistoryScreenTestTags.METADATA_RATING_STARS)
+            .onNodeWithTag(ShotHistoryScreenTestTags.metadataRatingStar(5))
             .performScrollTo()
-            .assertTextEquals("★★★★☆")
+            .assertTextEquals("☆")
         composeTestRule
             .onNodeWithTag(ShotHistoryScreenTestTags.METADATA_GRIND_INPUT)
             .performScrollTo()
@@ -488,9 +489,117 @@ class ShotHistoryScreenTest {
         )
 
         composeTestRule
-            .onNodeWithTag(ShotHistoryScreenTestTags.METADATA_RATING_STARS)
+            .onNodeWithTag(ShotHistoryScreenTestTags.metadataRatingStar(1))
             .performScrollTo()
-            .assertTextEquals("☆☆☆☆☆")
+            .assertTextEquals("☆")
+    }
+
+    @Test
+    fun tappingStarsUpdatesAndClearsRating() {
+        val editor = mutableStateOf(ShotUserMetadataEditorState(shotId = "shot-2000"))
+        val selectedDetail = mutableStateOf<ShotHistoryDetail?>(null)
+        val selectedEditor = mutableStateOf<ShotUserMetadataEditorState?>(null)
+        setScrollableContent {
+            ShotHistoryScreen(
+                items = listOf(ShotHistoryItem(id = "shot-2000", createdAtEpochMillis = 2_000L)),
+                selectedShotDetail = selectedDetail.value,
+                metadataEditor = selectedEditor.value,
+                onShotSelected = {
+                    selectedDetail.value = shotDetail()
+                    selectedEditor.value = editor.value
+                },
+                onMetadataRatingChange = { value ->
+                    editor.value = editor.value.copy(ratingText = value)
+                    selectedEditor.value = editor.value
+                }
+            )
+        }
+        composeTestRule
+            .onNodeWithTag(ShotHistoryScreenTestTags.historyRow("shot-2000"))
+            .performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule
+            .onNodeWithTag(ShotHistoryScreenTestTags.metadataRatingStar(4))
+            .performScrollTo()
+            .performClick()
+        composeTestRule
+            .onNodeWithTag(ShotHistoryScreenTestTags.metadataRatingStar(4))
+            .performScrollTo()
+            .assertTextEquals("★")
+        composeTestRule.runOnIdle {
+            assertEquals("4", editor.value.ratingText)
+        }
+
+        composeTestRule
+            .onNodeWithTag(ShotHistoryScreenTestTags.metadataRatingStar(2))
+            .performScrollTo()
+            .performClick()
+        composeTestRule.runOnIdle {
+            assertEquals("2", editor.value.ratingText)
+        }
+
+        composeTestRule
+            .onNodeWithTag(ShotHistoryScreenTestTags.metadataRatingStar(2))
+            .performScrollTo()
+            .performClick()
+        composeTestRule
+            .onNodeWithTag(ShotHistoryScreenTestTags.metadataRatingStar(1))
+            .performScrollTo()
+            .assertTextEquals("☆")
+        composeTestRule.runOnIdle {
+            assertEquals("", editor.value.ratingText)
+        }
+    }
+
+    @Test
+    fun beanSuggestionsFillBeanNameAndManualTypingStillWorks() {
+        val editor = mutableStateOf(ShotUserMetadataEditorState(shotId = "shot-2000"))
+        val selectedDetail = mutableStateOf<ShotHistoryDetail?>(null)
+        val selectedEditor = mutableStateOf<ShotUserMetadataEditorState?>(null)
+        setScrollableContent {
+            ShotHistoryScreen(
+                items = listOf(ShotHistoryItem(id = "shot-2000", createdAtEpochMillis = 2_000L)),
+                selectedShotDetail = selectedDetail.value,
+                metadataEditor = selectedEditor.value,
+                beanSuggestions = listOf("Delta Espresso Bar", "Hannoversche Kaffeemanufaktur"),
+                onShotSelected = {
+                    selectedDetail.value = shotDetail()
+                    selectedEditor.value = editor.value
+                },
+                onMetadataBeanNameChange = { value ->
+                    editor.value = editor.value.copy(beanName = value)
+                    selectedEditor.value = editor.value
+                }
+            )
+        }
+        composeTestRule
+            .onNodeWithTag(ShotHistoryScreenTestTags.historyRow("shot-2000"))
+            .performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule
+            .onNodeWithTag(ShotHistoryScreenTestTags.BEAN_SUGGESTIONS)
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeTestRule
+            .onNodeWithTag(ShotHistoryScreenTestTags.beanSuggestion("Delta Espresso Bar"))
+            .performScrollTo()
+            .performClick()
+        composeTestRule
+            .onNodeWithTag(ShotHistoryScreenTestTags.METADATA_BEAN_INPUT)
+            .performScrollTo()
+            .assertTextEquals("Delta Espresso Bar")
+
+        composeTestRule
+            .onNodeWithTag(ShotHistoryScreenTestTags.METADATA_BEAN_INPUT)
+            .performTextClearance()
+        composeTestRule
+            .onNodeWithTag(ShotHistoryScreenTestTags.METADATA_BEAN_INPUT)
+            .performTextInput("New Bean")
+        composeTestRule.runOnIdle {
+            assertEquals("New Bean", editor.value.beanName)
+        }
     }
 
     @Test
@@ -602,9 +711,9 @@ class ShotHistoryScreenTest {
 
         composeTestRule.onNodeWithText("Shot feedback cleared").performScrollTo().assertIsDisplayed()
         composeTestRule
-            .onNodeWithTag(ShotHistoryScreenTestTags.METADATA_RATING_INPUT)
+            .onNodeWithTag(ShotHistoryScreenTestTags.metadataRatingStar(1))
             .performScrollTo()
-            .assertTextEquals("")
+            .assertTextEquals("☆")
         composeTestRule
             .onNodeWithTag(ShotHistoryScreenTestTags.METADATA_GRIND_INPUT)
             .performScrollTo()
@@ -656,6 +765,11 @@ class ShotHistoryScreenTest {
             onPurgeHistory = { purgeCount += 1 }
         )
 
+        composeTestRule.onAllNodesWithTag(ShotHistoryScreenTestTags.PURGE_HISTORY_ACTION).assertCountEquals(0)
+        composeTestRule
+            .onNodeWithTag(ShotHistoryScreenTestTags.DANGER_ZONE_TOGGLE)
+            .performScrollTo()
+            .performClick()
         composeTestRule
             .onNodeWithTag(ShotHistoryScreenTestTags.PURGE_HISTORY_ACTION)
             .performScrollTo()

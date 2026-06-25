@@ -183,6 +183,21 @@ class ShotHistoryStateMapperTest {
     }
 
     @Test
+    fun beanSuggestionsUseExistingNonBlankBeanNamesWithoutCaseDuplicates() {
+        val entities = listOf(
+            shotEntity(id = "shot-1", createdAtEpochMillis = 1_000L, beanName = "Delta"),
+            shotEntity(id = "shot-2", createdAtEpochMillis = 2_000L, beanName = " delta "),
+            shotEntity(id = "shot-3", createdAtEpochMillis = 3_000L, beanName = "Hannover"),
+            shotEntity(id = "shot-4", createdAtEpochMillis = 4_000L, beanName = " ")
+        )
+
+        assertEquals(
+            listOf("Delta", "Hannover"),
+            ShotHistoryStateMapper.fromEntities(entities).beanSuggestions
+        )
+    }
+
+    @Test
     fun selectedShotDetailIsClearedWhenFilteredOut() {
         val entities = listOf(
             shotEntity(id = "shot-delta", createdAtEpochMillis = 1_000L, beanName = "Delta"),

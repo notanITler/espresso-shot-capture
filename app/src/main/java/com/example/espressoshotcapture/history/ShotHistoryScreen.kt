@@ -103,6 +103,7 @@ fun ShotHistoryScreen(
         beanFilterOptions = uiState.beanFilterOptions,
         selectedShotDetail = uiState.selectedShotDetail,
         metadataEditor = uiState.metadataEditor,
+        beanSuggestions = uiState.beanSuggestions,
         onShotSelected = onShotSelected,
         onBeanFilterSelected = onBeanFilterSelected,
         onMetadataRatingChange = onMetadataRatingChange,
@@ -132,6 +133,7 @@ fun ShotHistoryScreen(
     metadataEditor: ShotUserMetadataEditorState? = selectedShotDetail?.let { detail ->
         ShotUserMetadataEditorState(shotId = detail.id)
     },
+    beanSuggestions: List<String> = emptyList(),
     onShotSelected: (String) -> Unit = {},
     onBeanFilterSelected: (String) -> Unit = {},
     onMetadataRatingChange: (String) -> Unit = {},
@@ -147,6 +149,7 @@ fun ShotHistoryScreen(
 ) {
     var isHistoryExpanded by remember { mutableStateOf(false) }
     var isPurgeConfirming by remember { mutableStateOf(false) }
+    var isDangerZoneExpanded by remember { mutableStateOf(false) }
     val visibleItems = if (isHistoryExpanded) {
         items
     } else {
@@ -193,6 +196,38 @@ fun ShotHistoryScreen(
                         style = historyActionStyle()
                     )
                 }
+            }
+        }
+        ShotHistoryDetailSection(
+            detail = selectedShotDetail,
+            metadataEditor = metadataEditor,
+            beanSuggestions = beanSuggestions,
+            onMetadataRatingChange = onMetadataRatingChange,
+            onMetadataTasteDirectionChange = onMetadataTasteDirectionChange,
+            onMetadataGrindSettingChange = onMetadataGrindSettingChange,
+            onMetadataBeanNameChange = onMetadataBeanNameChange,
+            onMetadataNotesChange = onMetadataNotesChange,
+            onMetadataSave = onMetadataSave,
+            onMetadataClear = onMetadataClear,
+            onDeleteSelectedShot = onDeleteSelectedShot
+        )
+        SectionContainer(title = "Danger zone") {
+            BasicText(
+                text = if (isDangerZoneExpanded) {
+                    "Hide danger zone"
+                } else {
+                    "Show danger zone"
+                },
+                modifier = Modifier
+                    .padding(top = 8.dp)
+                    .testTag(ShotHistoryScreenTestTags.DANGER_ZONE_TOGGLE)
+                    .clickable {
+                        isDangerZoneExpanded = !isDangerZoneExpanded
+                        isPurgeConfirming = false
+                    },
+                style = historyActionStyle()
+            )
+            if (isDangerZoneExpanded) {
                 Spacer(modifier = Modifier.height(8.dp))
                 MetadataAction(
                     text = if (isPurgeConfirming) {
@@ -215,18 +250,6 @@ fun ShotHistoryScreen(
                 )
             }
         }
-        ShotHistoryDetailSection(
-            detail = selectedShotDetail,
-            metadataEditor = metadataEditor,
-            onMetadataRatingChange = onMetadataRatingChange,
-            onMetadataTasteDirectionChange = onMetadataTasteDirectionChange,
-            onMetadataGrindSettingChange = onMetadataGrindSettingChange,
-            onMetadataBeanNameChange = onMetadataBeanNameChange,
-            onMetadataNotesChange = onMetadataNotesChange,
-            onMetadataSave = onMetadataSave,
-            onMetadataClear = onMetadataClear,
-            onDeleteSelectedShot = onDeleteSelectedShot
-        )
     }
 }
 
@@ -291,6 +314,7 @@ private fun BeanFilterChip(
 private fun ShotHistoryDetailSection(
     detail: ShotHistoryDetail?,
     metadataEditor: ShotUserMetadataEditorState?,
+    beanSuggestions: List<String>,
     onMetadataRatingChange: (String) -> Unit,
     onMetadataTasteDirectionChange: (TasteDirection?) -> Unit,
     onMetadataGrindSettingChange: (String) -> Unit,
@@ -312,6 +336,7 @@ private fun ShotHistoryDetailSection(
                 ShotHistoryDetailView(
                     detail = detail,
                     metadataEditor = metadataEditor,
+                    beanSuggestions = beanSuggestions,
                     onMetadataRatingChange = onMetadataRatingChange,
                     onMetadataTasteDirectionChange = onMetadataTasteDirectionChange,
                     onMetadataGrindSettingChange = onMetadataGrindSettingChange,
@@ -429,6 +454,7 @@ private fun String.removeLabelPrefix(): String =
 private fun ShotHistoryDetailView(
     detail: ShotHistoryDetail,
     metadataEditor: ShotUserMetadataEditorState?,
+    beanSuggestions: List<String>,
     onMetadataRatingChange: (String) -> Unit,
     onMetadataTasteDirectionChange: (TasteDirection?) -> Unit,
     onMetadataGrindSettingChange: (String) -> Unit,
@@ -489,6 +515,7 @@ private fun ShotHistoryDetailView(
         if (metadataEditor != null) {
             ShotMetadataEditor(
                 editor = metadataEditor,
+                beanSuggestions = beanSuggestions,
                 onRatingChange = onMetadataRatingChange,
                 onTasteDirectionChange = onMetadataTasteDirectionChange,
                 onGrindSettingChange = onMetadataGrindSettingChange,
@@ -561,6 +588,7 @@ private fun ShotHistoryDetailView(
 @Composable
 private fun ShotMetadataEditor(
     editor: ShotUserMetadataEditorState,
+    beanSuggestions: List<String>,
     onRatingChange: (String) -> Unit,
     onTasteDirectionChange: (TasteDirection?) -> Unit,
     onGrindSettingChange: (String) -> Unit,
@@ -573,21 +601,11 @@ private fun ShotMetadataEditor(
         title = "Shot feedback",
         modifier = Modifier.testTag(ShotHistoryScreenTestTags.METADATA_EDITOR)
     ) {
-        BasicText(
-            text = ShotHistoryMapper.ratingStars(editor.ratingText.trim().toIntOrNull()),
-            modifier = Modifier.testTag(ShotHistoryScreenTestTags.METADATA_RATING_STARS),
-            style = TextStyle(
-                color = Color(0xFFF2C94C),
-                fontSize = 24.sp,
-                fontWeight = FontWeight.SemiBold
-            )
-        )
-        Spacer(modifier = Modifier.height(6.dp))
-        MetadataInput(
-            label = "Rating 1-5",
-            value = editor.ratingText,
-            onValueChange = onRatingChange,
-            testTag = ShotHistoryScreenTestTags.METADATA_RATING_INPUT
+        BasicText(text = "Rating", style = historyMutedStyle())
+        Spacer(modifier = Modifier.height(4.dp))
+        RatingStarsInput(
+            ratingText = editor.ratingText,
+            onRatingChange = onRatingChange
         )
         Spacer(modifier = Modifier.height(8.dp))
         BasicText(text = "Taste direction", style = historyMutedStyle())
@@ -639,6 +657,25 @@ private fun ShotMetadataEditor(
             onValueChange = onBeanNameChange,
             testTag = ShotHistoryScreenTestTags.METADATA_BEAN_INPUT
         )
+        if (beanSuggestions.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(6.dp))
+            BasicText(text = "Existing beans", style = historyMutedStyle())
+            Spacer(modifier = Modifier.height(4.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .testTag(ShotHistoryScreenTestTags.BEAN_SUGGESTIONS),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                beanSuggestions.forEach { beanName ->
+                    BeanSuggestionChip(
+                        beanName = beanName,
+                        onClick = { onBeanNameChange(beanName) }
+                    )
+                }
+            }
+        }
         Spacer(modifier = Modifier.height(8.dp))
         MetadataInput(
             label = "Notes",
@@ -678,6 +715,65 @@ private fun ShotMetadataEditor(
             )
         }
     }
+}
+
+@Composable
+private fun RatingStarsInput(
+    ratingText: String,
+    onRatingChange: (String) -> Unit
+) {
+    val selectedRating = ratingText.trim().toIntOrNull()?.takeIf { value -> value in 1..5 }
+    Row(
+        modifier = Modifier.testTag(ShotHistoryScreenTestTags.METADATA_RATING_STARS),
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        (1..5).forEach { rating ->
+            BasicText(
+                text = if (selectedRating != null && rating <= selectedRating) "★" else "☆",
+                modifier = Modifier
+                    .testTag(ShotHistoryScreenTestTags.metadataRatingStar(rating))
+                    .clickable {
+                        onRatingChange(
+                            if (selectedRating == rating) {
+                                ""
+                            } else {
+                                rating.toString()
+                            }
+                        )
+                    }
+                    .padding(horizontal = 2.dp, vertical = 2.dp),
+                style = TextStyle(
+                    color = Color(0xFFF2C94C),
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            )
+        }
+    }
+}
+
+@Composable
+private fun BeanSuggestionChip(
+    beanName: String,
+    onClick: () -> Unit
+) {
+    BasicText(
+        text = beanName,
+        modifier = Modifier
+            .testTag(ShotHistoryScreenTestTags.beanSuggestion(beanName))
+            .clickable(onClick = onClick)
+            .background(
+                color = Color(0xFF0F1114),
+                shape = RoundedCornerShape(6.dp)
+            )
+            .border(
+                width = 1.dp,
+                color = Color(0xFF3A414A),
+                shape = RoundedCornerShape(6.dp)
+            )
+            .padding(horizontal = 8.dp, vertical = 7.dp),
+        style = historyBodyStyle()
+    )
 }
 
 @Composable
@@ -879,7 +975,6 @@ object ShotHistoryScreenTestTags {
     const val RAW_JSON = "ShotDetailRawJsonContent"
     const val METADATA_EDITOR = "ShotFeedbackSection"
     const val METADATA_RATING_STARS = "ShotFeedbackRatingStars"
-    const val METADATA_RATING_INPUT = "ShotFeedbackRating"
     const val METADATA_TASTE_NONE = "ShotFeedbackTasteNone"
     const val METADATA_TASTE_SOUR = "ShotFeedbackTasteSour"
     const val METADATA_TASTE_BALANCED = "ShotFeedbackTasteBalanced"
@@ -892,8 +987,12 @@ object ShotHistoryScreenTestTags {
     const val METADATA_VALIDATION_MESSAGE = "ShotFeedbackValidationMessage"
     const val DELETE_SELECTED_ACTION = "ShotDetailDeleteAction"
     const val PURGE_HISTORY_ACTION = "ShotHistoryPurgeAction"
+    const val DANGER_ZONE_TOGGLE = "ShotHistoryDangerZoneToggle"
+    const val BEAN_SUGGESTIONS = "ShotFeedbackBeanSuggestions"
 
     fun beanFilterOption(key: String): String = "ShotHistoryBeanFilter_$key"
+    fun beanSuggestion(beanName: String): String = "ShotFeedbackBeanSuggestion_$beanName"
+    fun metadataRatingStar(rating: Int): String = "ShotFeedbackRatingStar_$rating"
     fun historyRow(id: String): String = "ShotHistoryRow_$id"
     fun historyRowTitle(id: String): String = "ShotHistoryRowTitle_$id"
     fun historyRowMetadata(id: String): String = "ShotHistoryRowMetadata_$id"

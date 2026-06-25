@@ -7,6 +7,7 @@ data class ShotHistoryUiState(
     val items: List<ShotHistoryItem>,
     val selectedShotDetail: ShotHistoryDetail? = null,
     val metadataEditor: ShotUserMetadataEditorState? = null,
+    val beanSuggestions: List<String> = emptyList(),
     val beanFilterOptions: List<ShotHistoryBeanFilterOption> = listOf(
         ShotHistoryBeanFilterOption(
             key = ShotHistoryBeanFilterKeys.ALL,
