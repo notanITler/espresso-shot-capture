@@ -30,7 +30,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -137,8 +136,7 @@ fun ScaleConnectionHeader(
                     fontSize = 19.sp,
                     fontWeight = FontWeight.Bold
                 ),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                maxLines = 2
             )
             BasicText(
                 text = state.buttonLabel,

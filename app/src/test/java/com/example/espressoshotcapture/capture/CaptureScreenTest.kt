@@ -318,12 +318,14 @@ class CaptureScreenTest {
             .onNodeWithTag(CaptureScreenTestTags.RECORDING_CAPTURE_ELAPSED)
             .performScrollTo()
             .assertIsDisplayed()
-            .assertTextContains("Capture elapsed: 0 s")
+            .assertTextContains("Capture elapsed")
+            .assertTextContains("0 s")
         composeTestRule
             .onNodeWithTag(CaptureScreenTestTags.RECORDING_AVERAGE_FLOW)
             .performScrollTo()
             .assertIsDisplayed()
-            .assertTextContains("Average flow: 0.0 g/s")
+            .assertTextContains("Average flow")
+            .assertTextContains("0.0 g/s")
     }
 
     @Test

@@ -3,6 +3,7 @@ package com.example.espressoshotcapture.capture
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,12 +12,17 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
@@ -355,25 +361,112 @@ private fun SupportingMetric(
     text: String,
     modifier: Modifier = Modifier
 ) {
-    BasicText(
-        text = text,
+    val label = text.substringBefore(":").trim().ifBlank { text }
+    val value = text.substringAfter(": ", "").ifBlank { "--" }
+
+    Row(
         modifier = modifier
+            .semantics(mergeDescendants = true) {}
+            .height(64.dp)
             .background(
-                color = Color(0xFF171A20),
-                shape = RoundedCornerShape(8.dp)
+                color = Color(0xFF151A20),
+                shape = RoundedCornerShape(10.dp)
             )
             .border(
                 width = 1.dp,
-                color = Color(0xFF303844),
-                shape = RoundedCornerShape(8.dp)
+                color = Color(0xFF343B46),
+                shape = RoundedCornerShape(10.dp)
             )
-            .padding(10.dp),
-        style = TextStyle(
-            color = Color(0xFFE6EBF0),
-            fontSize = 13.sp,
-            fontWeight = FontWeight.SemiBold
-        )
-    )
+            .padding(horizontal = 10.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        SupportingMetricIcon(label = label)
+        Column {
+            BasicText(
+                text = label,
+                style = TextStyle(
+                    color = Color(0xFFAAB2BC),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            )
+            Spacer(modifier = Modifier.height(3.dp))
+            BasicText(
+                text = value,
+                style = TextStyle(
+                    color = Color(0xFFF6F7F9),
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            )
+        }
+    }
+}
+
+@Composable
+private fun SupportingMetricIcon(
+    label: String,
+    modifier: Modifier = Modifier
+) {
+    val accent = Color(0xFFF2C94C)
+    val isFlow = label.contains("flow", ignoreCase = true)
+    Canvas(modifier = modifier.size(28.dp)) {
+        if (isFlow) {
+            val path = Path().apply {
+                moveTo(size.width * 0.5f, size.height * 0.12f)
+                cubicTo(
+                    size.width * 0.2f,
+                    size.height * 0.42f,
+                    size.width * 0.18f,
+                    size.height * 0.63f,
+                    size.width * 0.5f,
+                    size.height * 0.88f
+                )
+                cubicTo(
+                    size.width * 0.82f,
+                    size.height * 0.63f,
+                    size.width * 0.8f,
+                    size.height * 0.42f,
+                    size.width * 0.5f,
+                    size.height * 0.12f
+                )
+                close()
+            }
+            drawPath(path = path, color = accent, style = Stroke(width = 2.4f))
+            drawCircle(
+                color = accent.copy(alpha = 0.18f),
+                radius = size.minDimension * 0.24f,
+                center = Offset(size.width * 0.5f, size.height * 0.6f)
+            )
+        } else {
+            val center = Offset(size.width / 2f, size.height / 2f)
+            val radius = size.minDimension * 0.36f
+            drawCircle(
+                color = accent.copy(alpha = 0.16f),
+                radius = radius + 2f,
+                center = center
+            )
+            drawCircle(
+                color = accent,
+                radius = radius,
+                center = center,
+                style = Stroke(width = 2.4f)
+            )
+            drawLine(
+                color = accent,
+                start = center,
+                end = Offset(center.x, center.y - radius * 0.55f),
+                strokeWidth = 2.4f
+            )
+            drawLine(
+                color = accent,
+                start = center,
+                end = Offset(center.x + radius * 0.45f, center.y + radius * 0.2f),
+                strokeWidth = 2.4f
+            )
+        }
+    }
 }
 
 @Composable
