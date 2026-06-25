@@ -414,30 +414,39 @@ private fun SupportingMetricIcon(
     Canvas(modifier = modifier.size(28.dp)) {
         if (isFlow) {
             val path = Path().apply {
-                moveTo(size.width * 0.5f, size.height * 0.12f)
+                moveTo(size.width * 0.5f, size.height * 0.08f)
                 cubicTo(
-                    size.width * 0.2f,
-                    size.height * 0.42f,
-                    size.width * 0.18f,
-                    size.height * 0.63f,
-                    size.width * 0.5f,
-                    size.height * 0.88f
+                    size.width * 0.74f,
+                    size.height * 0.34f,
+                    size.width * 0.84f,
+                    size.height * 0.52f,
+                    size.width * 0.78f,
+                    size.height * 0.68f
                 )
                 cubicTo(
-                    size.width * 0.82f,
-                    size.height * 0.63f,
-                    size.width * 0.8f,
-                    size.height * 0.42f,
+                    size.width * 0.7f,
+                    size.height * 0.88f,
+                    size.width * 0.3f,
+                    size.height * 0.88f,
+                    size.width * 0.22f,
+                    size.height * 0.68f
+                )
+                cubicTo(
+                    size.width * 0.16f,
+                    size.height * 0.52f,
+                    size.width * 0.26f,
+                    size.height * 0.34f,
                     size.width * 0.5f,
-                    size.height * 0.12f
+                    size.height * 0.08f
                 )
                 close()
             }
             drawPath(path = path, color = accent, style = Stroke(width = 2.4f))
-            drawCircle(
-                color = accent.copy(alpha = 0.18f),
-                radius = size.minDimension * 0.24f,
-                center = Offset(size.width * 0.5f, size.height * 0.6f)
+            drawLine(
+                color = accent.copy(alpha = 0.62f),
+                start = Offset(size.width * 0.39f, size.height * 0.58f),
+                end = Offset(size.width * 0.32f, size.height * 0.68f),
+                strokeWidth = 2.0f
             )
         } else {
             val center = Offset(size.width / 2f, size.height / 2f)
