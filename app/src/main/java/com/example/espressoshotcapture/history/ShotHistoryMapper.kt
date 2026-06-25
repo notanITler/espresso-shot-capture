@@ -53,6 +53,14 @@ object ShotHistoryMapper {
     fun fromEntities(entities: List<ShotEntity>): List<ShotHistoryItem> =
         entities.map(::fromEntity)
 
+    fun ratingStars(rating: Int?): String {
+        val filledCount = rating?.takeIf { value -> value in 1..5 } ?: 0
+        return buildString {
+            repeat(filledCount) { append('★') }
+            repeat(5 - filledCount) { append('☆') }
+        }
+    }
+
     fun summaryFromJson(json: String): ShotHistorySummary {
         val shot = runCatching {
             Json.parseToJsonElement(json).jsonObject["shot"]?.jsonObject
@@ -151,7 +159,7 @@ object ShotHistoryMapper {
         val beanName = entity.beanName?.trim().orEmpty().ifBlank { UNASSIGNED_BEAN_LABEL }
         val rating = entity.rating
             ?.takeIf { value -> value in 1..5 }
-            ?.let { value -> "Rating $value/5" }
+            ?.let(::ratingStars)
         return listOfNotNull(beanName, rating).joinToString(" | ")
     }
 

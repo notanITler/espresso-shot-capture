@@ -1,4 +1,4 @@
-package com.example.espressoshotcapture.history
+﻿package com.example.espressoshotcapture.history
 
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Column
@@ -47,7 +47,7 @@ class ShotHistoryScreenTest {
                 ShotHistoryItem(
                     id = "shot-1000",
                     createdAtEpochMillis = 1_000L,
-                    comparisonTitleLabel = "Delta Espresso Bar | Rating 4/5",
+                    comparisonTitleLabel = "Delta Espresso Bar | ★★★★☆",
                     comparisonMetadataLabel = "Grind 8.10 | Balanced",
                     comparisonMetricsLabel = "18.0 g -> 36.8 g | 28 s | 1.3 g/s"
                 ),
@@ -59,7 +59,7 @@ class ShotHistoryScreenTest {
             )
         )
 
-        composeTestRule.onNodeWithText("Delta Espresso Bar | Rating 4/5").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Delta Espresso Bar | ★★★★☆").assertIsDisplayed()
         composeTestRule.onNodeWithText("Grind 8.10 | Balanced").assertIsDisplayed()
         composeTestRule.onNodeWithText("18.0 g -> 36.8 g | 28 s | 1.3 g/s").assertIsDisplayed()
         composeTestRule.onNodeWithText("Unassigned bean").assertIsDisplayed()
@@ -146,8 +146,8 @@ class ShotHistoryScreenTest {
             .onNodeWithTag(ShotHistoryScreenTestTags.beanFilterOption(ShotHistoryBeanFilterKeys.bean("delta espresso bar")))
             .performClick()
 
-        composeTestRule.onNodeWithText("Delta Espresso Bar | Rating 4/5").assertIsDisplayed()
-        composeTestRule.onAllNodesWithText("Hannoversche Kaffeemanufaktur | Rating 5/5").assertCountEquals(0)
+        composeTestRule.onNodeWithText("Delta Espresso Bar | ★★★★☆").assertIsDisplayed()
+        composeTestRule.onAllNodesWithText("Hannoversche Kaffeemanufaktur | ★★★★★").assertCountEquals(0)
         composeTestRule.onAllNodesWithText("Unassigned bean").assertCountEquals(0)
     }
 
@@ -167,10 +167,10 @@ class ShotHistoryScreenTest {
             .onNodeWithTag(ShotHistoryScreenTestTags.beanFilterOption(ShotHistoryBeanFilterKeys.bean("delta espresso bar")))
             .performClick()
 
-        composeTestRule.onNodeWithText("Delta Espresso Bar | Rating 5/5").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Delta Espresso Bar | Rating 4/5").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Delta Espresso Bar | Rating 3/5").assertIsDisplayed()
-        composeTestRule.onAllNodesWithText("Delta Espresso Bar | Rating 2/5").assertCountEquals(0)
+        composeTestRule.onNodeWithText("Delta Espresso Bar | ★★★★★").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Delta Espresso Bar | ★★★★☆").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Delta Espresso Bar | ★★★☆☆").assertIsDisplayed()
+        composeTestRule.onAllNodesWithText("Delta Espresso Bar | ★★☆☆☆").assertCountEquals(0)
 
         composeTestRule
             .onNodeWithTag(ShotHistoryScreenTestTags.HISTORY_EXPAND_ACTION)
@@ -179,8 +179,8 @@ class ShotHistoryScreenTest {
         composeTestRule
             .onAllNodesWithTag(ShotHistoryScreenTestTags.historyRow("shot-delta-1"))
             .assertCountEquals(1)
-        composeTestRule.onAllNodesWithText("Delta Espresso Bar | Rating 1/5").assertCountEquals(1)
-        composeTestRule.onAllNodesWithText("Hannoversche Kaffeemanufaktur | Rating 4/5").assertCountEquals(0)
+        composeTestRule.onAllNodesWithText("Delta Espresso Bar | ★☆☆☆☆").assertCountEquals(1)
+        composeTestRule.onAllNodesWithText("Hannoversche Kaffeemanufaktur | ★★★★☆").assertCountEquals(0)
     }
 
     @Test
@@ -200,7 +200,7 @@ class ShotHistoryScreenTest {
             .performClick()
 
         composeTestRule.onNodeWithText("Unassigned bean").assertIsDisplayed()
-        composeTestRule.onAllNodesWithText("Delta Espresso Bar | Rating 4/5").assertCountEquals(0)
+        composeTestRule.onAllNodesWithText("Delta Espresso Bar | ★★★★☆").assertCountEquals(0)
     }
 
     @Test
@@ -232,7 +232,7 @@ class ShotHistoryScreenTest {
             .onAllNodesWithTag(ShotHistoryScreenTestTags.historyRow("shot-unassigned-1"))
             .assertCountEquals(1)
         composeTestRule.onAllNodesWithText("Unassigned bean 1").assertCountEquals(1)
-        composeTestRule.onAllNodesWithText("Delta Espresso Bar | Rating 5/5").assertCountEquals(0)
+        composeTestRule.onAllNodesWithText("Delta Espresso Bar | ★★★★★").assertCountEquals(0)
     }
 
     @Test
@@ -247,16 +247,16 @@ class ShotHistoryScreenTest {
             )
         }
 
-        composeTestRule.onNodeWithText("Delta Espresso Bar | Rating 4/5").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Delta Espresso Bar | ★★★★☆").assertIsDisplayed()
         composeTestRule
             .onNodeWithTag(ShotHistoryScreenTestTags.beanFilterOption(ShotHistoryBeanFilterKeys.ALL))
             .performClick()
 
-        composeTestRule.onNodeWithText("Delta Espresso Bar | Rating 4/5").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Delta Espresso Bar | ★★★★☆").assertIsDisplayed()
         composeTestRule
             .onNodeWithTag(ShotHistoryScreenTestTags.historyRow("shot-hannover"))
             .performScrollTo()
-        composeTestRule.onNodeWithText("Hannoversche Kaffeemanufaktur | Rating 5/5").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Hannoversche Kaffeemanufaktur | ★★★★★").assertIsDisplayed()
         composeTestRule
             .onNodeWithTag(ShotHistoryScreenTestTags.historyRow("shot-unassigned"))
             .performScrollTo()
@@ -463,6 +463,10 @@ class ShotHistoryScreenTest {
             .performScrollTo()
             .assertTextEquals("4")
         composeTestRule
+            .onNodeWithTag(ShotHistoryScreenTestTags.METADATA_RATING_STARS)
+            .performScrollTo()
+            .assertTextEquals("★★★★☆")
+        composeTestRule
             .onNodeWithTag(ShotHistoryScreenTestTags.METADATA_GRIND_INPUT)
             .performScrollTo()
             .assertTextEquals("8.10")
@@ -474,6 +478,19 @@ class ShotHistoryScreenTest {
             .onNodeWithTag(ShotHistoryScreenTestTags.METADATA_NOTES_INPUT)
             .performScrollTo()
             .assertTextEquals("Sweet and clear")
+    }
+
+    @Test
+    fun emptyRatingRendersEmptyStarsCleanly() {
+        selectShotWithMetadataEditor(
+            detail = shotDetail(),
+            metadataEditor = ShotUserMetadataEditorState(shotId = "shot-2000")
+        )
+
+        composeTestRule
+            .onNodeWithTag(ShotHistoryScreenTestTags.METADATA_RATING_STARS)
+            .performScrollTo()
+            .assertTextEquals("☆☆☆☆☆")
     }
 
     @Test
@@ -602,12 +619,72 @@ class ShotHistoryScreenTest {
             .assertTextEquals("")
     }
 
+    @Test
+    fun deleteSelectedShotRequiresConfirmation() {
+        var deleteCount = 0
+        selectShotWithMetadataEditor(
+            detail = shotDetail(),
+            metadataEditor = ShotUserMetadataEditorState(shotId = "shot-2000"),
+            onDeleteSelectedShot = { deleteCount += 1 }
+        )
+
+        composeTestRule
+            .onNodeWithTag(ShotHistoryScreenTestTags.DELETE_SELECTED_ACTION)
+            .performScrollTo()
+            .performClick()
+        composeTestRule.runOnIdle {
+            assertEquals(0, deleteCount)
+        }
+        composeTestRule.onNodeWithText("Confirm delete shot").performScrollTo().assertIsDisplayed()
+
+        composeTestRule
+            .onNodeWithTag(ShotHistoryScreenTestTags.DELETE_SELECTED_ACTION)
+            .performScrollTo()
+            .performClick()
+        composeTestRule.runOnIdle {
+            assertEquals(1, deleteCount)
+        }
+    }
+
+    @Test
+    fun purgeHistoryRequiresConfirmation() {
+        var purgeCount = 0
+        setHistoryContent(
+            items = listOf(
+                ShotHistoryItem(id = "shot-1", createdAtEpochMillis = 1_000L)
+            ),
+            onPurgeHistory = { purgeCount += 1 }
+        )
+
+        composeTestRule
+            .onNodeWithTag(ShotHistoryScreenTestTags.PURGE_HISTORY_ACTION)
+            .performScrollTo()
+            .performClick()
+        composeTestRule.runOnIdle {
+            assertEquals(0, purgeCount)
+        }
+        composeTestRule.onNodeWithText("Confirm purge shot history").performScrollTo().assertIsDisplayed()
+
+        composeTestRule
+            .onNodeWithTag(ShotHistoryScreenTestTags.PURGE_HISTORY_ACTION)
+            .performScrollTo()
+            .performClick()
+        composeTestRule.runOnIdle {
+            assertEquals(1, purgeCount)
+        }
+    }
+
     private fun setHistoryContent(
         items: List<ShotHistoryItem>,
-        onShotSelected: (String) -> Unit = {}
+        onShotSelected: (String) -> Unit = {},
+        onPurgeHistory: () -> Unit = {}
     ) {
         setScrollableContent {
-            ShotHistoryScreen(items = items, onShotSelected = onShotSelected)
+            ShotHistoryScreen(
+                items = items,
+                onShotSelected = onShotSelected,
+                onPurgeHistory = onPurgeHistory
+            )
         }
     }
 
@@ -616,14 +693,14 @@ class ShotHistoryScreenTest {
             ShotHistoryItem(
                 id = "shot-delta",
                 createdAtEpochMillis = 3_000L,
-                comparisonTitleLabel = "Delta Espresso Bar | Rating 4/5",
+                comparisonTitleLabel = "Delta Espresso Bar | ★★★★☆",
                 comparisonMetadataLabel = "Grind 8.10 | Balanced",
                 comparisonMetricsLabel = "18.0 g -> 36.5 g | 27.8 s | 1.3 g/s"
             ),
             ShotHistoryItem(
                 id = "shot-hannover",
                 createdAtEpochMillis = 2_000L,
-                comparisonTitleLabel = "Hannoversche Kaffeemanufaktur | Rating 5/5",
+                comparisonTitleLabel = "Hannoversche Kaffeemanufaktur | ★★★★★",
                 comparisonMetadataLabel = "Grind 9.0 | Sour",
                 comparisonMetricsLabel = "18.0 g -> 38.2 g | 29 s | 1.3 g/s"
             ),
@@ -640,7 +717,7 @@ class ShotHistoryScreenTest {
             ShotHistoryItem(
                 id = "shot-delta-5",
                 createdAtEpochMillis = 9_000L,
-                comparisonTitleLabel = "Delta Espresso Bar | Rating 5/5",
+                comparisonTitleLabel = "Delta Espresso Bar | ★★★★★",
                 comparisonMetadataLabel = "Grind 8.5 | Balanced",
                 comparisonMetricsLabel = "18.0 g -> 36.5 g | 27.8 s | 1.3 g/s"
             ),
@@ -653,7 +730,7 @@ class ShotHistoryScreenTest {
             ShotHistoryItem(
                 id = "shot-delta-4",
                 createdAtEpochMillis = 7_000L,
-                comparisonTitleLabel = "Delta Espresso Bar | Rating 4/5",
+                comparisonTitleLabel = "Delta Espresso Bar | ★★★★☆",
                 comparisonMetadataLabel = "Grind 8.4 | Balanced",
                 comparisonMetricsLabel = "18.0 g -> 36.4 g | 27.4 s | 1.3 g/s"
             ),
@@ -666,7 +743,7 @@ class ShotHistoryScreenTest {
             ShotHistoryItem(
                 id = "shot-delta-3",
                 createdAtEpochMillis = 5_000L,
-                comparisonTitleLabel = "Delta Espresso Bar | Rating 3/5",
+                comparisonTitleLabel = "Delta Espresso Bar | ★★★☆☆",
                 comparisonMetadataLabel = "Grind 8.3 | Bitter",
                 comparisonMetricsLabel = "18.0 g -> 36.3 g | 27.3 s | 1.3 g/s"
             ),
@@ -679,7 +756,7 @@ class ShotHistoryScreenTest {
             ShotHistoryItem(
                 id = "shot-delta-2",
                 createdAtEpochMillis = 3_000L,
-                comparisonTitleLabel = "Delta Espresso Bar | Rating 2/5",
+                comparisonTitleLabel = "Delta Espresso Bar | ★★☆☆☆",
                 comparisonMetadataLabel = "Grind 8.2 | Sour",
                 comparisonMetricsLabel = "18.0 g -> 36.2 g | 27.2 s | 1.3 g/s"
             ),
@@ -692,14 +769,14 @@ class ShotHistoryScreenTest {
             ShotHistoryItem(
                 id = "shot-delta-1",
                 createdAtEpochMillis = 1_000L,
-                comparisonTitleLabel = "Delta Espresso Bar | Rating 1/5",
+                comparisonTitleLabel = "Delta Espresso Bar | ★☆☆☆☆",
                 comparisonMetadataLabel = "Grind 8.1 | Sour",
                 comparisonMetricsLabel = "18.0 g -> 36.1 g | 27.1 s | 1.3 g/s"
             ),
             ShotHistoryItem(
                 id = "shot-hannover",
                 createdAtEpochMillis = 500L,
-                comparisonTitleLabel = "Hannoversche Kaffeemanufaktur | Rating 4/5",
+                comparisonTitleLabel = "Hannoversche Kaffeemanufaktur | ★★★★☆",
                 comparisonMetadataLabel = "Grind 9.0 | Balanced",
                 comparisonMetricsLabel = "18.0 g -> 38.2 g | 29 s | 1.3 g/s"
             )
@@ -743,7 +820,8 @@ class ShotHistoryScreenTest {
 
     private fun selectShotWithMetadataEditor(
         detail: ShotHistoryDetail,
-        metadataEditor: ShotUserMetadataEditorState
+        metadataEditor: ShotUserMetadataEditorState,
+        onDeleteSelectedShot: () -> Unit = {}
     ) {
         val selectedDetail = mutableStateOf<ShotHistoryDetail?>(null)
         val selectedEditor = mutableStateOf<ShotUserMetadataEditorState?>(null)
@@ -755,7 +833,8 @@ class ShotHistoryScreenTest {
                 onShotSelected = {
                     selectedDetail.value = detail
                     selectedEditor.value = metadataEditor
-                }
+                },
+                onDeleteSelectedShot = onDeleteSelectedShot
             )
         }
         composeTestRule
@@ -792,3 +871,4 @@ class ShotHistoryScreenTest {
             targetReachedLabel = "Target reached: yes"
         )
 }
+

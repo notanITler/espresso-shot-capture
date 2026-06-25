@@ -134,15 +134,30 @@ fun CaptureScreen(
             style = captureBodyStyle()
         )
         Spacer(modifier = Modifier.height(3.dp))
+        val progressFraction = captureProgressFraction(uiState.progressLabel)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(7.dp)
+                .testTag(CaptureScreenTestTags.PROGRESS_BAR)
                 .background(
                     color = Color(0xFF303844),
                     shape = RoundedCornerShape(12.dp)
                 )
-        )
+        ) {
+            if (progressFraction > 0f) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(progressFraction)
+                        .height(7.dp)
+                        .testTag(CaptureScreenTestTags.PROGRESS_BAR_FILL)
+                        .background(
+                            color = Color(0xFF5DCB8A),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                )
+            }
+        }
         Spacer(modifier = Modifier.height(4.dp))
         BasicText(
             text = uiState.targetReachedLabel,
@@ -482,6 +497,8 @@ object CaptureScreenTestTags {
     const val STATUS = "capture-status"
     const val RECORDING_WEIGHT = "recording-weight"
     const val RECORDING_PROGRESS = "recording-progress"
+    const val PROGRESS_BAR = "capture-progress-bar"
+    const val PROGRESS_BAR_FILL = "capture-progress-bar-fill"
     const val RECORDING_CAPTURE_ELAPSED = "recording-capture-elapsed"
     const val RECORDING_AVERAGE_FLOW = "recording-average-flow"
     const val TARGET_REACHED = "target-reached"
@@ -495,6 +512,20 @@ private fun CaptureUiState.decentScaleSourceLabel(): String =
 
 private fun String.asLiveWeightValue(): String =
     removePrefix("Weight:").trim()
+
+internal fun captureProgressFraction(progressLabel: String): Float {
+    val match = Regex("""Progress:\s*([-+]?\d+(?:\.\d+)?)\s*/\s*([-+]?\d+(?:\.\d+)?)\s*g""")
+        .find(progressLabel)
+        ?: return 0f
+    val currentWeight = match.groupValues[1].toDoubleOrNull() ?: return 0f
+    val targetYieldGrams = match.groupValues[2].toDoubleOrNull() ?: return 0f
+    if (targetYieldGrams.isNaN() || targetYieldGrams.isInfinite() || targetYieldGrams <= 0.0) {
+        return 0f
+    }
+    return (currentWeight / targetYieldGrams)
+        .coerceIn(0.0, 1.0)
+        .toFloat()
+}
 
 @Preview
 @Composable

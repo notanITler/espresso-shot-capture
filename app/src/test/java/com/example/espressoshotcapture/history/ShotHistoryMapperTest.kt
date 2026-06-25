@@ -269,9 +269,19 @@ class ShotHistoryMapperTest {
 
         val item = ShotHistoryMapper.fromEntity(entity)
 
-        assertEquals("Delta Espresso Bar | Rating 4/5", item.comparisonTitleLabel)
+        assertEquals("Delta Espresso Bar | ★★★★☆", item.comparisonTitleLabel)
         assertEquals("Grind 8.10 | Balanced", item.comparisonMetadataLabel)
         assertEquals("18.0 g -> 36.5 g | 27.8 s | 1.3 g/s", item.comparisonMetricsLabel)
+    }
+
+    @Test
+    fun ratingStarsRenderOneThroughFiveAndEmptyRating() {
+        assertEquals("★☆☆☆☆", ShotHistoryMapper.ratingStars(1))
+        assertEquals("★★☆☆☆", ShotHistoryMapper.ratingStars(2))
+        assertEquals("★★★☆☆", ShotHistoryMapper.ratingStars(3))
+        assertEquals("★★★★☆", ShotHistoryMapper.ratingStars(4))
+        assertEquals("★★★★★", ShotHistoryMapper.ratingStars(5))
+        assertEquals("☆☆☆☆☆", ShotHistoryMapper.ratingStars(null))
     }
 
     @Test

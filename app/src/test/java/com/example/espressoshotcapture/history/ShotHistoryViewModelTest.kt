@@ -407,6 +407,45 @@ class ShotHistoryViewModelTest {
         assertEquals("Shot no longer exists", editor?.validationMessage)
     }
 
+    @Test
+    fun deletingSelectedShotRemovesShotAndClearsSelection() = runTest(testDispatcher) {
+        dao.insertShot(shotEntity(id = "shot-keep", createdAtEpochMillis = 2_000L))
+        dao.insertShot(shotEntity(id = "shot-delete", createdAtEpochMillis = 1_000L))
+        viewModel.selectShot("shot-delete")
+        viewModel.uiState.first { state -> state.selectedShotDetail?.id == "shot-delete" }
+
+        viewModel.deleteSelectedShot()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val uiState = viewModel.uiState
+            .first { state -> state.items.map { item -> item.id } == listOf("shot-keep") }
+        assertNull(dao.getShotById("shot-delete"))
+        assertEquals(null, uiState.selectedShotDetail)
+        assertEquals(null, uiState.metadataEditor)
+    }
+
+    @Test
+    fun purgingShotHistoryRemovesAllShotsAndResetsSelectionAndFilter() = runTest(testDispatcher) {
+        dao.insertShot(shotEntity(id = "shot-delta", createdAtEpochMillis = 2_000L, beanName = "Delta"))
+        dao.insertShot(shotEntity(id = "shot-empty", createdAtEpochMillis = 1_000L))
+        viewModel.selectBeanFilter(ShotHistoryBeanFilterKeys.bean("delta"))
+        viewModel.selectShot("shot-delta")
+        viewModel.uiState.first { state -> state.selectedShotDetail?.id == "shot-delta" }
+
+        viewModel.purgeShotHistory()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val uiState = viewModel.uiState
+            .first { state -> state.items.isEmpty() }
+        assertEquals(emptyList<ShotEntity>(), dao.getAllShotsOnce())
+        assertEquals(null, uiState.selectedShotDetail)
+        assertEquals(null, uiState.metadataEditor)
+        assertEquals(
+            ShotHistoryBeanFilterKeys.ALL,
+            uiState.beanFilterOptions.first { option -> option.isSelected }.key
+        )
+    }
+
     private fun shotEntity(
         id: String,
         createdAtEpochMillis: Long,
@@ -451,6 +490,11 @@ private class FakeShotDao : ShotDao {
     override fun deleteShotById(id: String) {
         shots.removeAll { shot -> shot.id == id }
         shotsFlow.value = orderedShots()
+    }
+
+    override fun deleteAllShots() {
+        shots.clear()
+        shotsFlow.value = emptyList()
     }
 
     override fun updateShotUserMetadata(

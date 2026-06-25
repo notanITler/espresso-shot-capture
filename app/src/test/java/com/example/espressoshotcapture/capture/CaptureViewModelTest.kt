@@ -879,6 +879,11 @@ private class FakeShotDao : ShotDao {
         shotsFlow.value = shots.toList()
     }
 
+    override fun deleteAllShots() {
+        shots.clear()
+        shotsFlow.value = emptyList()
+    }
+
     override fun updateShotUserMetadata(
         id: String,
         rating: Int?,

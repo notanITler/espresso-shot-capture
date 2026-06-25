@@ -158,6 +158,37 @@ class ShotHistoryViewModel(
         }
     }
 
+    fun deleteSelectedShot() {
+        val shotId = selectedShotId.value ?: return
+        viewModelScope.launch {
+            runCatching {
+                withContext(metadataWriteDispatcher) {
+                    shotRepository.deleteShotById(shotId)
+                }
+            }.onSuccess {
+                if (selectedShotId.value == shotId) {
+                    selectedShotId.value = null
+                    metadataEditorOverride.value = null
+                }
+            }
+        }
+    }
+
+    fun purgeShotHistory() {
+        viewModelScope.launch {
+            runCatching {
+                withContext(metadataWriteDispatcher) {
+                    shotRepository.deleteAllShots()
+                }
+            }.onSuccess {
+                selectedShotId.value = null
+                selectedBeanFilterKey.value = ShotHistoryBeanFilterKeys.ALL
+                metadataEditorOverride.value = null
+                observedShotIds = emptySet()
+            }
+        }
+    }
+
     private fun updateMetadataEditor(
         transform: (ShotUserMetadataEditorState) -> ShotUserMetadataEditorState
     ) {

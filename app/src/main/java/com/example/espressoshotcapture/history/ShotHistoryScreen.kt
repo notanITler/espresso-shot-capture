@@ -76,6 +76,8 @@ fun ShotHistoryRoute(
         onMetadataNotesChange = viewModel::updateMetadataNotes,
         onMetadataSave = viewModel::saveShotUserMetadata,
         onMetadataClear = viewModel::clearShotUserMetadata,
+        onDeleteSelectedShot = viewModel::deleteSelectedShot,
+        onPurgeHistory = viewModel::purgeShotHistory,
         modifier = modifier
     )
 }
@@ -92,6 +94,8 @@ fun ShotHistoryScreen(
     onMetadataNotesChange: (String) -> Unit = {},
     onMetadataSave: () -> Unit = {},
     onMetadataClear: () -> Unit = {},
+    onDeleteSelectedShot: () -> Unit = {},
+    onPurgeHistory: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     ShotHistoryScreen(
@@ -108,6 +112,8 @@ fun ShotHistoryScreen(
         onMetadataNotesChange = onMetadataNotesChange,
         onMetadataSave = onMetadataSave,
         onMetadataClear = onMetadataClear,
+        onDeleteSelectedShot = onDeleteSelectedShot,
+        onPurgeHistory = onPurgeHistory,
         modifier = modifier
     )
 }
@@ -135,9 +141,12 @@ fun ShotHistoryScreen(
     onMetadataNotesChange: (String) -> Unit = {},
     onMetadataSave: () -> Unit = {},
     onMetadataClear: () -> Unit = {},
+    onDeleteSelectedShot: () -> Unit = {},
+    onPurgeHistory: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var isHistoryExpanded by remember { mutableStateOf(false) }
+    var isPurgeConfirming by remember { mutableStateOf(false) }
     val visibleItems = if (isHistoryExpanded) {
         items
     } else {
@@ -184,6 +193,26 @@ fun ShotHistoryScreen(
                         style = historyActionStyle()
                     )
                 }
+                Spacer(modifier = Modifier.height(8.dp))
+                MetadataAction(
+                    text = if (isPurgeConfirming) {
+                        "Confirm purge shot history"
+                    } else {
+                        "Purge shot history"
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag(ShotHistoryScreenTestTags.PURGE_HISTORY_ACTION)
+                        .clickable {
+                            if (isPurgeConfirming) {
+                                isPurgeConfirming = false
+                                onPurgeHistory()
+                            } else {
+                                isPurgeConfirming = true
+                            }
+                        },
+                    isDestructive = true
+                )
             }
         }
         ShotHistoryDetailSection(
@@ -195,7 +224,8 @@ fun ShotHistoryScreen(
             onMetadataBeanNameChange = onMetadataBeanNameChange,
             onMetadataNotesChange = onMetadataNotesChange,
             onMetadataSave = onMetadataSave,
-            onMetadataClear = onMetadataClear
+            onMetadataClear = onMetadataClear,
+            onDeleteSelectedShot = onDeleteSelectedShot
         )
     }
 }
@@ -267,7 +297,8 @@ private fun ShotHistoryDetailSection(
     onMetadataBeanNameChange: (String) -> Unit,
     onMetadataNotesChange: (String) -> Unit,
     onMetadataSave: () -> Unit,
-    onMetadataClear: () -> Unit
+    onMetadataClear: () -> Unit,
+    onDeleteSelectedShot: () -> Unit
 ) {
     SectionContainer(title = "Selected Shot Detail") {
         if (detail == null) {
@@ -287,7 +318,8 @@ private fun ShotHistoryDetailSection(
                     onMetadataBeanNameChange = onMetadataBeanNameChange,
                     onMetadataNotesChange = onMetadataNotesChange,
                     onMetadataSave = onMetadataSave,
-                    onMetadataClear = onMetadataClear
+                    onMetadataClear = onMetadataClear,
+                    onDeleteSelectedShot = onDeleteSelectedShot
                 )
             }
         }
@@ -321,7 +353,7 @@ private fun ShotHistoryRow(
                 .width(3.dp)
                 .height(44.dp)
                 .background(
-                    color = if (item.comparisonTitleLabel == "Unassigned bean") {
+                    color = if (item.comparisonTitleLabel.startsWith("Unassigned bean")) {
                         Color(0xFFF2C94C)
                     } else {
                         Color(0xFF5DCB8A)
@@ -404,9 +436,11 @@ private fun ShotHistoryDetailView(
     onMetadataNotesChange: (String) -> Unit,
     onMetadataSave: () -> Unit,
     onMetadataClear: () -> Unit,
+    onDeleteSelectedShot: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var isRawJsonVisible by remember { mutableStateOf(false) }
+    var isDeleteConfirming by remember(detail.id) { mutableStateOf(false) }
 
     Column(
         modifier = modifier
@@ -464,6 +498,26 @@ private fun ShotHistoryDetailView(
                 onClear = onMetadataClear
             )
         }
+        MetadataAction(
+            text = if (isDeleteConfirming) {
+                "Confirm delete shot"
+            } else {
+                "Delete shot"
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp)
+                .testTag(ShotHistoryScreenTestTags.DELETE_SELECTED_ACTION)
+                .clickable {
+                    if (isDeleteConfirming) {
+                        isDeleteConfirming = false
+                        onDeleteSelectedShot()
+                    } else {
+                        isDeleteConfirming = true
+                    }
+                },
+            isDestructive = true
+        )
         BasicText(
             text = if (isRawJsonVisible) {
                 "Hide raw JSON / debug detail"
@@ -519,6 +573,16 @@ private fun ShotMetadataEditor(
         title = "Shot feedback",
         modifier = Modifier.testTag(ShotHistoryScreenTestTags.METADATA_EDITOR)
     ) {
+        BasicText(
+            text = ShotHistoryMapper.ratingStars(editor.ratingText.trim().toIntOrNull()),
+            modifier = Modifier.testTag(ShotHistoryScreenTestTags.METADATA_RATING_STARS),
+            style = TextStyle(
+                color = Color(0xFFF2C94C),
+                fontSize = 24.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+        )
+        Spacer(modifier = Modifier.height(6.dp))
         MetadataInput(
             label = "Rating 1-5",
             value = editor.ratingText,
@@ -679,22 +743,23 @@ private fun TasteDirectionChip(
 @Composable
 private fun MetadataAction(
     text: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isDestructive: Boolean = false
 ) {
     BasicText(
         text = text,
         modifier = modifier
             .background(
-                color = Color(0xFF24282E),
+                color = if (isDestructive) Color(0xFF2B1719) else Color(0xFF24282E),
                 shape = RoundedCornerShape(6.dp)
             )
             .border(
                 width = 1.dp,
-                color = Color(0xFF3A414A),
+                color = if (isDestructive) Color(0xFF6B3036) else Color(0xFF3A414A),
                 shape = RoundedCornerShape(6.dp)
             )
             .padding(horizontal = 10.dp, vertical = 8.dp),
-        style = historyActionStyle()
+        style = if (isDestructive) historyDestructiveActionStyle() else historyActionStyle()
     )
 }
 
@@ -788,6 +853,13 @@ private fun historyActionStyle(): TextStyle =
         fontWeight = FontWeight.SemiBold
     )
 
+private fun historyDestructiveActionStyle(): TextStyle =
+    TextStyle(
+        color = Color(0xFFFFA8A8),
+        fontSize = 13.sp,
+        fontWeight = FontWeight.SemiBold
+    )
+
 private fun historyMonoStyle(): TextStyle =
     TextStyle(
         color = Color(0xFFE6EBF0),
@@ -806,6 +878,7 @@ object ShotHistoryScreenTestTags {
     const val RAW_JSON_TOGGLE = "ShotDetailRawJsonToggle"
     const val RAW_JSON = "ShotDetailRawJsonContent"
     const val METADATA_EDITOR = "ShotFeedbackSection"
+    const val METADATA_RATING_STARS = "ShotFeedbackRatingStars"
     const val METADATA_RATING_INPUT = "ShotFeedbackRating"
     const val METADATA_TASTE_NONE = "ShotFeedbackTasteNone"
     const val METADATA_TASTE_SOUR = "ShotFeedbackTasteSour"
@@ -817,6 +890,8 @@ object ShotHistoryScreenTestTags {
     const val METADATA_SAVE_ACTION = "ShotFeedbackSave"
     const val METADATA_CLEAR_ACTION = "ShotFeedbackClear"
     const val METADATA_VALIDATION_MESSAGE = "ShotFeedbackValidationMessage"
+    const val DELETE_SELECTED_ACTION = "ShotDetailDeleteAction"
+    const val PURGE_HISTORY_ACTION = "ShotHistoryPurgeAction"
 
     fun beanFilterOption(key: String): String = "ShotHistoryBeanFilter_$key"
     fun historyRow(id: String): String = "ShotHistoryRow_$id"

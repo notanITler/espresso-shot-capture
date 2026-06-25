@@ -44,4 +44,12 @@ class ShotRepository(
         )
         return updatedRows > 0
     }
+
+    fun deleteShotById(shotId: String) {
+        shotDao.deleteShotById(shotId)
+    }
+
+    fun deleteAllShots() {
+        shotDao.deleteAllShots()
+    }
 }

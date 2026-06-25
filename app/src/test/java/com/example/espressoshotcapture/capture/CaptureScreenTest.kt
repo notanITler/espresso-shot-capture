@@ -22,6 +22,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import com.example.espressoshotcapture.MainActivity
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -323,6 +324,38 @@ class CaptureScreenTest {
             .performScrollTo()
             .assertIsDisplayed()
             .assertTextContains("Average flow: 0.0 g/s")
+    }
+
+    @Test
+    fun progressFractionUsesCurrentYieldOverTargetYield() {
+        assertEquals(
+            0.5f,
+            captureProgressFraction("Progress: 18.0 / 36.0 g"),
+            0.001f
+        )
+    }
+
+    @Test
+    fun progressFractionClampsToZeroAndOne() {
+        assertEquals(
+            0f,
+            captureProgressFraction("Progress: -2.0 / 36.0 g"),
+            0.001f
+        )
+        assertEquals(
+            1f,
+            captureProgressFraction("Progress: 72.0 / 36.0 g"),
+            0.001f
+        )
+    }
+
+    @Test
+    fun progressFractionIsZeroForInvalidTargetYield() {
+        assertEquals(
+            0f,
+            captureProgressFraction("Progress: 18.0 / 0.0 g"),
+            0.001f
+        )
     }
 
     @Test

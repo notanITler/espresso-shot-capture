@@ -25,6 +25,9 @@ interface ShotDao {
     @Query("DELETE FROM shots WHERE id = :id")
     fun deleteShotById(id: String)
 
+    @Query("DELETE FROM shots")
+    fun deleteAllShots()
+
     @Query(
         """
         UPDATE shots
